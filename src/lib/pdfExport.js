@@ -7,6 +7,7 @@ import { todayISO, fmtDMY } from "./helpers.js";
 const autoTable = typeof autoTableImport === "function" ? autoTableImport : autoTableImport.default;
 import { DEFAULT_FORM_TEMPLATE } from "./constants.js";
 import { mergeTemplate } from "./formTemplate.js";
+import { KMILE_LOGO, KMILE_LOGO_RATIO } from "./logo.js";
 
 const CHK = "√";
 // compact grid labels for the narrow check columns (group headers still match)
@@ -57,11 +58,13 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
       17: { cellWidth: 22, halign: "center" }, 18: { cellWidth: 168 }, 19: { cellWidth: 22, halign: "center" }, 20: { cellWidth: 58 }, 21: { cellWidth: 30, halign: "center" },
     },
     didDrawPage: () => {
-      // ---- header: centered title + identity row (matches the K-Mile form) ----
+      // ---- header: K-Mile logo (top-left) + centered title + identity row ----
+      const logoW = 132, logoH = logoW / KMILE_LOGO_RATIO;
+      try { doc.addImage(KMILE_LOGO, "PNG", 24, 20, logoW, logoH); } catch { /* logo optional */ }
       doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(15, 42, 84);
-      doc.text(tpl.title, W / 2, 30, { align: "center" });
+      doc.text(tpl.title, W / 2, 34, { align: "center" });
       doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(20, 30, 45);
-      const y = 52;
+      const y = 58;
       const cells = [
         ["Name - Surname: ", profile.name || ""],
         ["Staff ID. ", profile.staffId || ""],
@@ -74,7 +77,7 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
         const lw = doc.getTextWidth(label);
         doc.setFont("helvetica", "normal"); doc.text(String(val), colX[i] + lw, y);
       });
-      doc.setDrawColor(15, 42, 84); doc.setLineWidth(1); doc.line(24, 62, W - 24, 62);
+      doc.setDrawColor(15, 42, 84); doc.setLineWidth(1); doc.line(24, 68, W - 24, 68);
     },
   });
 
@@ -92,8 +95,14 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
     const colA = legend.slice(0, half), colB = legend.slice(half);
     colA.forEach((l, i) => doc.text(l, 40, H - BOTTOM + 68 + i * 11));
     colB.forEach((l, i) => doc.text(l, 220, H - BOTTOM + 68 + i * 11));
-    doc.setFontSize(7); doc.setTextColor(90, 100, 115);
-    doc.text(`Page ${p} / ${pages}`, W - 24, H - 16, { align: "right" });
+    // ---- bottom band on every page: company (left) + form no. (right) ----
+    doc.setDrawColor(15, 42, 84); doc.setLineWidth(0.6); doc.line(24, H - 24, W - 24, H - 24);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(15, 42, 84);
+    doc.text(tpl.companyFooter, 24, H - 13);
+    doc.setFont("helvetica", "normal"); doc.setTextColor(70, 80, 95);
+    doc.text(`Form No. ${tpl.formNo}`, W - 24, H - 13, { align: "right" });
+    doc.setFontSize(6.5); doc.setTextColor(140, 150, 165);
+    doc.text(`Page ${p} / ${pages}`, W / 2, H - 13, { align: "center" });
   }
 
   // ---- last page: declaration + signature + date ----
@@ -101,13 +110,13 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
   doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(20, 30, 45);
   doc.text(tpl.declaration, W / 2 + 40, H - BOTTOM + 60, { align: "left" });
   const sigX = W - 300;
-  if (profile.signature) { try { doc.addImage(profile.signature, "PNG", sigX + 40, H - 74, 120, 36); } catch { /* skip bad image */ } }
+  if (profile.signature) { try { doc.addImage(profile.signature, "PNG", sigX + 40, H - 82, 120, 34); } catch { /* skip bad image */ } }
   doc.setDrawColor(120); doc.setLineWidth(0.5);
-  doc.line(sigX + 30, H - 38, sigX + 180, H - 38);
-  doc.line(W - 150, H - 38, W - 24, H - 38);
+  doc.line(sigX + 30, H - 46, sigX + 180, H - 46);
+  doc.line(W - 150, H - 46, W - 24, H - 46);
   doc.setFontSize(8); doc.setTextColor(40, 50, 65);
-  doc.text(tpl.signatureCaption, sigX + 40, H - 26);
-  doc.text(`${tpl.dateCaption}: ${exportedOn}`, W - 150, H - 26);
+  doc.text(tpl.signatureCaption, sigX + 40, H - 35);
+  doc.text(`${tpl.dateCaption}: ${exportedOn}`, W - 150, H - 35);
 
   const fname = `AMEL_Logbook_${(profile.name || "staff").replace(/\s+/g, "_")}_${todayISO()}.pdf`;
   doc.save(fname);

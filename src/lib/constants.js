@@ -88,4 +88,6 @@ export const DEFAULT_FORM_TEMPLATE = {
   declaration: "I declare that the entries in this logbook are completed and true.",
   signatureCaption: "Logbook Owner's Signature",
   dateCaption: "Date",
+  companyFooter: "K-Mile Air Co.,Ltd.",
+  formNo: "FSDS4/FORM1-059/Rev.00/Jun 2023",
 };

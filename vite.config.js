@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig({
-  base: "/Kmile-ExpLogbook/",
+  base: "/kmile-logbook/",
   plugins: [react()],
   server: { port: 5173, open: false },
 });
