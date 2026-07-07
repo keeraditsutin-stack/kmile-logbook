@@ -45,7 +45,7 @@ export default function Dashboard({ profile, records, training }) {
       {(a.trainingTasks > 0 || a.trainingDays > 0) && (
         <div className="credit-note" style={{ background: "#EAF2FA", borderColor: "#c3ddf3", color: "var(--blue-d)" }}>
           <GraduationCap size={16} />
-          Fed in from the training record: <b>{a.trainingTasks}</b> practical course{a.trainingTasks !== 1 ? "s" : ""} counted under <b>Alternative activities</b> (20% cap) and <b>{a.trainingDays}</b> training day{a.trainingDays !== 1 ? "s" : ""} counted as working days. These update automatically whenever a training record changes.
+          Fed in from the training record: <b>{a.trainingTasks}</b> course{a.trainingTasks !== 1 ? "s" : ""} counted under <b>Alternative activities</b> (20% cap) and <b>{a.trainingDays}</b> training day{a.trainingDays !== 1 ? "s" : ""} counted as working days. These update automatically whenever a training record changes.
         </div>
       )}
 
@@ -117,7 +117,7 @@ export default function Dashboard({ profile, records, training }) {
             <span className="type-mini-item">Logbook alt. activities <b className="mono">{a.logbookAltCount}</b></span>
             <span className="type-mini-item tag-blue" style={{ color: "var(--blue)" }}>Training courses <b className="mono">{a.trainingTasks}</b></span>
           </div>
-          <div className="panel-foot" style={{ marginBottom: 14 }}>Instructor/assessor, technical support, management/planning <b>and practical training courses</b> may replace up to 20% ({a.altCapTasks}) of required experience. Training records fed in here update automatically.</div>
+          <div className="panel-foot" style={{ marginBottom: 14 }}>Instructor/assessor, technical support, management/planning <b>and all training courses on record</b> may replace up to 20% ({a.altCapTasks}) of required experience. Training records fed in here update automatically.</div>
           <div className="panel-head" style={{ marginTop: 4 }}><span>Type of activity</span></div>
           <div className="chips">
             {ACTIVITY_TYPES.map(t => (

@@ -5,16 +5,15 @@ import {
 } from "./constants.js";
 import { daysBetween, clampPct, todayISO } from "./helpers.js";
 
-/* Training records that count as on-the-job experience feeding the logbook:
-   a practical, passed course inside the experience period. Each such course
-   contributes its training day(s) as full working day(s) and one experience
-   task (Training activity). Recomputed on every training/logbook change. */
+/* Training records that count as experience feeding the logbook: every course
+   with a record inside the experience period. Each course contributes its
+   training day(s) as full working day(s) and one experience task (Training
+   activity). Recomputed on every training/logbook change. */
 export function trainingContribution(training, start, end) {
   const days = new Set();
   let tasks = 0;
   const recs = (training || []).filter(t =>
-    t.practical && t.result === "Pass" && t.date &&
-    (!start || t.date >= start) && (!end || t.date <= end));
+    t.date && (!start || t.date >= start) && (!end || t.date <= end));
   for (const t of recs) {
     tasks += 1;
     // count each calendar day of a course (date .. dateTo), capped at 30 days
