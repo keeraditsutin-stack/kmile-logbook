@@ -46,77 +46,80 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
     r.ata || "", r.details || "", r.duration || "", r.ref || "", r.remark || String(idx + 1),
   ]));
 
-  const TOP = 96, BOTTOM = 132;
+  // black & white, Arial-equivalent (Helvetica), no bold anywhere
+  const INK = [0, 0, 0];
+  const TOP = 92, BOTTOM = 150;
   const chk = { halign: "center", cellWidth: 15 };
   autoTable(doc, {
-    head, body, startY: TOP, margin: { top: TOP, left: 24, right: 24, bottom: BOTTOM },
-    styles: { fontSize: 6.2, cellPadding: 2, overflow: "linebreak", valign: "middle", lineColor: [120, 130, 145], lineWidth: 0.5 },
-    headStyles: { fillColor: [15, 42, 84], textColor: 255, fontSize: 5.6, halign: "center", valign: "middle", lineColor: [120, 130, 145], lineWidth: 0.5 },
+    head, body, startY: TOP, margin: { top: TOP, left: 22, right: 22, bottom: BOTTOM },
+    // no table fill colours; thin black grid only
+    styles: { font: "helvetica", fontStyle: "normal", fontSize: 6.4, cellPadding: 2, overflow: "linebreak", valign: "middle", textColor: INK, lineColor: INK, lineWidth: 0.4, fillColor: false },
+    headStyles: { font: "helvetica", fontStyle: "normal", fontSize: 6, halign: "center", valign: "middle", textColor: INK, fillColor: false, lineColor: INK, lineWidth: 0.4 },
+    bodyStyles: { fillColor: false },
     columnStyles: {
-      0: { cellWidth: 42 }, 1: { cellWidth: 26 }, 2: { cellWidth: 34 }, 3: { cellWidth: 40 }, 4: { cellWidth: 34 }, 5: { cellWidth: 30 },
+      0: { cellWidth: 44 }, 1: { cellWidth: 30 }, 2: { cellWidth: 38 }, 3: { cellWidth: 44 }, 4: { cellWidth: 38 }, 5: { cellWidth: 34 },
       6: chk, 7: chk, 8: chk, 9: chk, 10: chk, 11: chk, 12: chk, 13: chk, 14: chk, 15: chk, 16: chk,
-      17: { cellWidth: 22, halign: "center" }, 18: { cellWidth: 168 }, 19: { cellWidth: 22, halign: "center" }, 20: { cellWidth: 58 }, 21: { cellWidth: 30, halign: "center" },
+      17: { cellWidth: 24, halign: "center" }, 18: { cellWidth: "auto" }, 19: { cellWidth: 26, halign: "center" }, 20: { cellWidth: 70 }, 21: { cellWidth: 34, halign: "center" },
     },
     didDrawPage: () => {
       // ---- header: K-Mile logo (top-left) + centered title + identity row ----
-      const logoW = 132, logoH = logoW / KMILE_LOGO_RATIO;
-      try { doc.addImage(KMILE_LOGO, "PNG", 24, 20, logoW, logoH); } catch { /* logo optional */ }
-      doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(15, 42, 84);
-      doc.text(tpl.title, W / 2, 34, { align: "center" });
-      doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(20, 30, 45);
-      const y = 58;
+      const logoW = 130, logoH = logoW / KMILE_LOGO_RATIO;
+      try { doc.addImage(KMILE_LOGO, "PNG", 22, 18, logoW, logoH); } catch { /* logo optional */ }
+      doc.setFont("helvetica", "normal"); doc.setTextColor(...INK);
+      doc.setFontSize(13); doc.text(tpl.title, W / 2, 32, { align: "center" });
+      doc.setFontSize(9);
+      const y = 56;
       const cells = [
         ["Name - Surname: ", profile.name || ""],
         ["Staff ID. ", profile.staffId || ""],
         ["License No. ", profile.license || profile.amelNo || ""],
         ["Authorization No. ", profile.authNo || ""],
       ];
-      const colX = [24, W * 0.40, W * 0.60, W * 0.78];
+      const colX = [22, W * 0.40, W * 0.60, W * 0.78];
       cells.forEach(([label, val], i) => {
-        doc.setFont("helvetica", "bold"); doc.text(label, colX[i], y);
-        const lw = doc.getTextWidth(label);
-        doc.setFont("helvetica", "normal"); doc.text(String(val), colX[i] + lw, y);
+        doc.text(label + String(val), colX[i], y);
       });
-      doc.setDrawColor(15, 42, 84); doc.setLineWidth(1); doc.line(24, 68, W - 24, 68);
+      doc.setDrawColor(...INK); doc.setLineWidth(0.6); doc.line(22, 66, W - 22, 66);
     },
   });
 
-  // ---- footer on every page: * Remark legend (two columns) ----
+  // ---- footer on EVERY page: legend + declaration + signature + company band ----
   const pages = doc.internal.getNumberOfPages();
   const H = doc.internal.pageSize.getHeight();
   const legend = tpl.legend;
   const half = Math.ceil(legend.length / 2);
   for (let p = 1; p <= pages; p++) {
     doc.setPage(p);
-    doc.setDrawColor(15, 42, 84); doc.setLineWidth(0.6); doc.line(24, H - BOTTOM + 42, W - 24, H - BOTTOM + 42);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(40, 50, 65);
-    doc.text("* Remark", 24, H - BOTTOM + 56);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(6.6); doc.setTextColor(70, 80, 95);
-    const colA = legend.slice(0, half), colB = legend.slice(half);
-    colA.forEach((l, i) => doc.text(l, 40, H - BOTTOM + 68 + i * 11));
-    colB.forEach((l, i) => doc.text(l, 220, H - BOTTOM + 68 + i * 11));
-    // ---- bottom band on every page: company (left) + form no. (right) ----
-    doc.setDrawColor(15, 42, 84); doc.setLineWidth(0.6); doc.line(24, H - 24, W - 24, H - 24);
-    doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(15, 42, 84);
-    doc.text(tpl.companyFooter, 24, H - 13);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(70, 80, 95);
-    doc.text(`Form No. ${tpl.formNo}`, W - 24, H - 13, { align: "right" });
-    doc.setFontSize(6.5); doc.setTextColor(140, 150, 165);
-    doc.text(`Page ${p} / ${pages}`, W / 2, H - 13, { align: "center" });
-  }
+    doc.setFont("helvetica", "normal"); doc.setTextColor(...INK);
+    // separator between table and footer
+    doc.setDrawColor(...INK); doc.setLineWidth(0.5); doc.line(22, H - BOTTOM + 20, W - 22, H - BOTTOM + 20);
 
-  // ---- last page: declaration + signature + date ----
-  doc.setPage(pages);
-  doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(20, 30, 45);
-  doc.text(tpl.declaration, W / 2 + 40, H - BOTTOM + 60, { align: "left" });
-  const sigX = W - 300;
-  if (profile.signature) { try { doc.addImage(profile.signature, "PNG", sigX + 40, H - 82, 120, 34); } catch { /* skip bad image */ } }
-  doc.setDrawColor(120); doc.setLineWidth(0.5);
-  doc.line(sigX + 30, H - 46, sigX + 180, H - 46);
-  doc.line(W - 150, H - 46, W - 24, H - 46);
-  doc.setFontSize(8); doc.setTextColor(40, 50, 65);
-  doc.text(tpl.signatureCaption, sigX + 40, H - 35);
-  doc.text(`${tpl.dateCaption}: ${exportedOn}`, W - 150, H - 35);
+    // legend (left, two columns)
+    doc.setFontSize(7); doc.text("* Remark", 22, H - BOTTOM + 34);
+    doc.setFontSize(6.6);
+    const colA = legend.slice(0, half), colB = legend.slice(half);
+    colA.forEach((l, i) => doc.text(l, 38, H - BOTTOM + 46 + i * 10));
+    colB.forEach((l, i) => doc.text(l, 210, H - BOTTOM + 46 + i * 10));
+
+    // declaration (left, below legend) — kept clear of the signature on the right
+    doc.setFontSize(8); doc.text(tpl.declaration, 22, H - 40);
+
+    // signature block (right side, cannot overlap the declaration on the left)
+    const sigRight = W - 22, sigLeftX = W - 250;
+    if (profile.signature) { try { doc.addImage(profile.signature, "PNG", sigLeftX + 6, H - 74, 110, 28); } catch { /* skip bad image */ } }
+    doc.setDrawColor(...INK); doc.setLineWidth(0.5);
+    doc.line(sigLeftX, H - 44, sigLeftX + 140, H - 44);           // signature line
+    doc.line(sigLeftX + 152, H - 44, sigRight, H - 44);           // date line
+    doc.setFontSize(8);
+    doc.text(tpl.signatureCaption, sigLeftX, H - 34);
+    doc.text(`${tpl.dateCaption}: ${exportedOn}`, sigLeftX + 152, H - 34);
+
+    // bottom band: company (left) + page (center) + form no. (right)
+    doc.setDrawColor(...INK); doc.setLineWidth(0.5); doc.line(22, H - 22, W - 22, H - 22);
+    doc.setFontSize(7.5); doc.text(tpl.companyFooter, 22, H - 11);
+    doc.text(`Form No. ${tpl.formNo}`, W - 22, H - 11, { align: "right" });
+    doc.setFontSize(6.5); doc.text(`Page ${p} / ${pages}`, W / 2, H - 11, { align: "center" });
+  }
 
   const fname = `AMEL_Logbook_${(profile.name || "staff").replace(/\s+/g, "_")}_${todayISO()}.pdf`;
   doc.save(fname);
