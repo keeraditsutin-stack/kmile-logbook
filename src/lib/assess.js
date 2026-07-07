@@ -45,14 +45,17 @@ export function assess(records, profile, training) {
   const workingDays = distinctDates.filter(d => byDate[d] >= FULL_DAY_HOURS).length || distinctDates.length;
   const fullDays = distinctDates.filter(d => byDate[d] >= FULL_DAY_HOURS).length;
 
-  // alternative activities (logbook only)
+  // alternative activities — instructor/support/management logbook entries
+  // PLUS practical training courses fed in from the training record. They all
+  // count under the same 20% alternative-activities allowance.
   const isAlt = (r) => EXP_CATEGORIES.find(c => c.k === r.category)?.alt;
-  const altCount = inWin.filter(isAlt).length;
-  const directCount = inWin.length - altCount;
+  const logbookAltCount = inWin.filter(isAlt).length;
+  const directCount = inWin.length - logbookAltCount;
+  const trainingTasks = tc.tasks;
+  const altCount = logbookAltCount + trainingTasks;
   const altCapTasks = Math.floor(TASKS_TARGET * ALT_MAX_PCT); // 36
   const altCountedTasks = Math.min(altCount, altCapTasks);
-  const trainingTasks = tc.tasks;
-  const effTasks = directCount + altCountedTasks + trainingTasks;
+  const effTasks = directCount + altCountedTasks;
 
   // criterion 1: tasks OR days
   const tasksMet = effTasks >= TASKS_TARGET;
@@ -100,7 +103,7 @@ export function assess(records, profile, training) {
   const eligible = crit1 && spreadOk && natureOk && altOk && similarOk && (inWin.length + trainingTasks) > 0;
 
   return {
-    total: inWin.length, directCount, altCount, effTasks, fullDays, workingDays, distinctDates: distinctDates.length,
+    total: inWin.length, directCount, altCount, logbookAltCount, effTasks, fullDays, workingDays, distinctDates: distinctDates.length,
     trainingTasks, trainingDays: tc.days.size,
     tasksMet, daysMet, crit1, tasksPct: clampPct((effTasks / TASKS_TARGET) * 100), daysPct: clampPct((fullDays / DAYS_TARGET) * 100),
     firstHalf, secondHalf, mid, maxGap, spreadOk, typeCounts, typesCovered, natureOk, missingTypes, actCounts,

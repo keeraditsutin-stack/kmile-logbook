@@ -145,6 +145,8 @@ select.input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xml
 /* distribution rows */
 .dist-row{margin-bottom:12px;} .dist-top{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;margin-bottom:5px;}
 .type-mini{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.alt-breakdown{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 2px;}
+.alt-breakdown .type-mini-item{font-size:12px;}
 .type-mini-item{font-size:11px;color:var(--muted);background:#F3F6F9;border-radius:6px;padding:3px 8px;}
 .empty-sm{color:var(--muted);font-size:13px;padding:8px 0;text-align:center;}
 
