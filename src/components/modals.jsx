@@ -231,7 +231,7 @@ export function TrainingImportModal({ onClose, onImport, existingCount }) {
 }
 
 /* ============ EXPORT PDF ============ */
-export function ExportModal({ records, profile, onClose }) {
+export function ExportModal({ records, profile, formTemplate, onClose }) {
   const [range, setRange] = useState("all");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -240,7 +240,7 @@ export function ExportModal({ records, profile, onClose }) {
     : records;
   const go = async () => {
     setBusy(true); setErr("");
-    try { await exportLogbookPdf(recs, profile); onClose(); }
+    try { await exportLogbookPdf(recs, profile, formTemplate); onClose(); }
     catch (e) { setErr(e.message || "Export failed."); setBusy(false); }
   };
   return (

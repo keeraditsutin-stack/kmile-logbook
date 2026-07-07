@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Clock, Gauge, Info } from "lucide-react";
+import { Clock, Gauge, Info, GraduationCap } from "lucide-react";
 import { StatusPill, Bar } from "./ui.jsx";
 import { assess } from "../lib/assess.js";
 import {
@@ -8,7 +8,7 @@ import {
 import { fmtDate, daysBetween, todayISO, clampPct } from "../lib/helpers.js";
 
 export default function Dashboard({ profile, records, training }) {
-  const a = useMemo(() => assess(records, profile), [records, profile]);
+  const a = useMemo(() => assess(records, profile, training), [records, profile, training]);
   const recentTraining = (training || []).filter(t => t.category === "Type Training" && t.theoretical && t.practical && t.result === "Pass" && daysBetween(t.date, todayISO()) <= 365);
 
   return (
@@ -39,6 +39,13 @@ export default function Dashboard({ profile, records, training }) {
       {recentTraining.length > 0 && (
         <div className="credit-note"><Info size={16} />
           Type training passed at a Part‑147 organisation within the last 12 months — <b>Credit of Experience</b> may supersede the 6/24‑month demonstration (ref 3.9.3.1).
+        </div>
+      )}
+
+      {(a.trainingTasks > 0 || a.trainingDays > 0) && (
+        <div className="credit-note" style={{ background: "#EAF2FA", borderColor: "#c3ddf3", color: "var(--blue-d)" }}>
+          <GraduationCap size={16} />
+          Fed in from the training record: <b>{a.trainingTasks}</b> practical course{a.trainingTasks !== 1 ? "s" : ""} counted as experience tasks and <b>{a.trainingDays}</b> training day{a.trainingDays !== 1 ? "s" : ""} counted as working days. These update automatically whenever a training record changes.
         </div>
       )}
 

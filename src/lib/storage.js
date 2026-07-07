@@ -7,6 +7,7 @@ export const K = {
   logbook: "kmile:v3:logbook",
   training: "kmile:v3:training",
   session: "kmile:v3:session",
+  formTemplate: "kmile:v3:formTemplate",
 };
 
 export const load = (key, fb) => parseJSON(localStorage.getItem(key), fb);

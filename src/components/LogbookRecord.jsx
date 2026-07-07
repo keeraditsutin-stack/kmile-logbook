@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react";
 import { Plus, Trash2, Download, Search, Edit3, FileSpreadsheet } from "lucide-react";
 import { Field } from "./ui.jsx";
 import { ImportModal, ExportModal } from "./modals.jsx";
-import { AIRCRAFT_TYPES, RATINGS, TASK_TYPES, ACTIVITY_TYPES, EXP_CATEGORIES } from "../lib/constants.js";
+import { AIRCRAFT_TYPES, RATINGS, TASK_TYPES, ACTIVITY_TYPES, EXP_CATEGORIES, DEFAULT_FORM_TEMPLATE } from "../lib/constants.js";
 import { uid, todayISO, fmtDate } from "../lib/helpers.js";
 
 const emptyRecord = () => ({
@@ -11,7 +11,8 @@ const emptyRecord = () => ({
   remark: "", category: "direct",
 });
 
-export default function LogbookRecord({ records, profile, onAdd, onUpdate, onDelete, onImport, readOnly }) {
+export default function LogbookRecord({ records, profile, formTemplate, onAdd, onUpdate, onDelete, onImport, readOnly }) {
+  const cols = { ...DEFAULT_FORM_TEMPLATE.columns, ...(formTemplate?.columns || {}) };
   const [form, setForm] = useState(emptyRecord());
   const [editing, setEditing] = useState(null);
   const [q, setQ] = useState("");
@@ -45,7 +46,7 @@ export default function LogbookRecord({ records, profile, onAdd, onUpdate, onDel
         </div>
       </header>
       {importOpen && !readOnly && <ImportModal onClose={() => setImportOpen(false)} onImport={onImport} existingCount={records.length} />}
-      {exportOpen && <ExportModal records={records} profile={profile} onClose={() => setExportOpen(false)} />}
+      {exportOpen && <ExportModal records={records} profile={profile} formTemplate={formTemplate} onClose={() => setExportOpen(false)} />}
 
       {open && !readOnly && (
         <div className="panel form-panel">
@@ -110,7 +111,7 @@ export default function LogbookRecord({ records, profile, onAdd, onUpdate, onDel
         {filtered.length === 0 ? <div className="empty">No records yet. Add your first maintenance task above.</div> : (
           <table className="tbl">
             <thead><tr>
-              <th>Date</th><th>Loc</th><th>A/C type</th><th>Reg / S/N</th><th>Rating</th><th>Task type</th><th>Activity</th><th>ATA</th><th>Details</th><th>Hrs</th><th>Ref</th>{!readOnly && <th></th>}
+              <th>{cols.date}</th><th>{cols.location}</th><th>{cols.acType}</th><th>{cols.acReg}</th><th>{cols.rating}</th><th>{cols.taskType}</th><th>{cols.activity}</th><th>{cols.ata}</th><th>{cols.details}</th><th>{cols.duration}</th><th>{cols.ref}</th>{!readOnly && <th></th>}
             </tr></thead>
             <tbody>
               {filtered.map(r => (

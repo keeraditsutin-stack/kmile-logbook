@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, ClipboardList, GraduationCap, HelpCircle, ShieldCheck, Users,
-  LogOut, Plane, Edit3, KeyRound,
+  LogOut, Plane, Edit3, KeyRound, FileText,
 } from "lucide-react";
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import LogbookRecord from "./components/LogbookRecord.jsx";
 import TrainingRecord from "./components/TrainingRecord.jsx";
 import UserGuide from "./components/UserGuide.jsx";
-import { AdminDashboard, UserManagement } from "./components/Admin.jsx";
+import { AdminDashboard, UserManagement, FormTemplateAdmin } from "./components/Admin.jsx";
 import { SignatureModal, ChangePasswordModal } from "./components/modals.jsx";
 import { K, load, save, seedAdminIfEmpty, DEFAULT_ADMIN } from "./lib/storage.js";
 import { TASK_TYPES, ACTIVITY_TYPES } from "./lib/constants.js";
@@ -24,14 +24,16 @@ export default function App() {
   const [sigOpen, setSigOpen] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [firstRun, setFirstRun] = useState(false);
+  const [formTemplate, setFormTemplate] = useState(null);
 
   useEffect(() => { (async () => {
     let u = load(K.users, []);
     if (u.length === 0) { u = await seedAdminIfEmpty(u); setFirstRun(true); }
     const lb = load(K.logbook, {});
     const tr = load(K.training, {});
+    const ft = load(K.formTemplate, null);
     const sess = load(K.session, null);
-    setUsers(u); setLogbook(lb); setTraining(tr);
+    setUsers(u); setLogbook(lb); setTraining(tr); setFormTemplate(ft);
     if (sess?.email) { const me = u.find(x => x.email === sess.email); if (me && me.status === "active") setCurrent(me); }
     setLoading(false);
   })(); }, []);
@@ -72,6 +74,8 @@ export default function App() {
     persistTr({ ...training, [current.email]: [...base, ...recs] });
   };
   const saveSignature = (dataURL) => updateUser(current.email, { signature: dataURL });
+  const saveFormTemplate = (tpl) => { setFormTemplate(tpl); save(K.formTemplate, tpl); };
+  const resetFormTemplate = () => { setFormTemplate(null); save(K.formTemplate, null); };
 
   const exportCSV = () => {
     const head = ["Email", "Name", "StaffID", "Status", "Date", "Location", "A/C Type", "Reg/SN", "Rating", "TaskTypes", "Activity", "ATA", "Details", "Hours", "Ref", "Category"];
@@ -115,6 +119,7 @@ export default function App() {
     ...(isAdmin ? [
       { k: "admin-dash", label: "Monitoring dashboard", icon: ShieldCheck },
       { k: "admin-users", label: "User management", icon: Users },
+      { k: "admin-form", label: "Logbook form", icon: FileText },
     ] : []),
   ];
 
@@ -145,7 +150,7 @@ export default function App() {
 
       <main className="main">
         {tab === "dashboard" && <Dashboard profile={current} records={myLogs} training={myTraining} />}
-        {tab === "logbook" && <LogbookRecord records={myLogs} profile={current} onAdd={addLog} onUpdate={updateLog} onDelete={deleteLog} onImport={importLogs} />}
+        {tab === "logbook" && <LogbookRecord records={myLogs} profile={current} formTemplate={formTemplate} onAdd={addLog} onUpdate={updateLog} onDelete={deleteLog} onImport={importLogs} />}
         {tab === "training" && <TrainingRecord records={myTraining} onAdd={addTr} onDelete={deleteTr} onImport={importTr} />}
         {tab === "guideline" && <UserGuide />}
         {tab === "admin-dash" && isAdmin && !viewingUser && (
@@ -154,13 +159,16 @@ export default function App() {
         {tab === "admin-users" && isAdmin && (
           <UserManagement users={users} onRegister={registerUser} onUpdateUser={updateUser} selfEmail={current.email} />
         )}
+        {tab === "admin-form" && isAdmin && (
+          <FormTemplateAdmin template={formTemplate} onSave={saveFormTemplate} onReset={resetFormTemplate} />
+        )}
         {tab === "admin-dash" && isAdmin && viewingUser && (
           <div className="page">
             <button className="link-back" onClick={() => setViewingEmail(null)}>← Back to monitoring dashboard</button>
             <div className="view-banner"><Users size={16} /> Viewing <b>{viewingUser.name}</b> ({viewingUser.email})</div>
             <Dashboard profile={viewingUser} records={logbook[viewingUser.email] || []} training={training[viewingUser.email] || []} />
             <TrainingRecord records={training[viewingUser.email] || []} readOnly onAdd={() => {}} onDelete={() => {}} onImport={() => {}} />
-            <LogbookRecord records={logbook[viewingUser.email] || []} profile={viewingUser} readOnly onAdd={() => {}} onUpdate={() => {}} onDelete={() => {}} />
+            <LogbookRecord records={logbook[viewingUser.email] || []} profile={viewingUser} formTemplate={formTemplate} readOnly onAdd={() => {}} onUpdate={() => {}} onDelete={() => {}} />
           </div>
         )}
       </main>

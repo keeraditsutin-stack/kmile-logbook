@@ -1,15 +1,17 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef } from "react";
 import {
   Download, ShieldCheck, Users, UserPlus, CheckCircle2, AlertTriangle, GraduationCap,
-  KeyRound, Archive, Eye, EyeOff, LayoutDashboard, ClipboardList,
+  KeyRound, Archive, Eye, EyeOff, LayoutDashboard, ClipboardList, FileText, UploadCloud, RotateCcw, Info,
 } from "lucide-react";
 import { Field, StatusPill, Bar } from "./ui.jsx";
 import { assess, trainingAlerts } from "../lib/assess.js";
 import {
   TASK_TYPES, TASKS_TARGET, DAYS_TARGET, POSITIONS, ADMIN_POSITION, USER_STATUSES,
+  DEFAULT_FORM_TEMPLATE, TASK_TYPES as TT,
 } from "../lib/constants.js";
 import { todayISO, addYears, fmtDate } from "../lib/helpers.js";
 import { hashPassword, newSalt } from "../lib/storage.js";
+import { parseFormDocx, mergeTemplate } from "../lib/formTemplate.js";
 
 const statusBadge = (s) =>
   s === "active" ? <span className="status-badge st-active">Active</span> :
@@ -18,21 +20,21 @@ const statusBadge = (s) =>
 
 /* ==================== MONITORING DASHBOARD ==================== */
 export function AdminDashboard({ users, logbook, training, onView, onExport }) {
+  // monitored staff only — admins (Compliance Monitoring) are not trainees
   const rows = useMemo(() => users
-    .filter(u => u.status !== "archived")
+    .filter(u => u.status !== "archived" && u.role !== "admin")
     .map(u => {
-      const a = assess(logbook[u.email] || [], u);
+      const a = assess(logbook[u.email] || [], u, training[u.email] || []);
       const alerts = trainingAlerts(training[u.email] || []);
       return { u, a, tr: (training[u.email] || []).length, alerts };
     })
     .sort((x, y) => (x.a.eligible === y.a.eligible ? 0 : x.a.eligible ? 1 : -1)), [users, logbook, training]);
 
-  const staffRows = rows.filter(r => r.u.role !== "admin" || (logbook[r.u.email] || []).length > 0);
   const eligible = rows.filter(r => r.a.eligible).length;
-  const totalRecords = Object.values(logbook).reduce((s, a) => s + a.length, 0);
+  const totalRecords = rows.reduce((s, r) => s + (logbook[r.u.email] || []).length, 0);
   const expiredAll = rows.reduce((s, r) => s + r.alerts.expired.length, 0);
   const expiringAll = rows.reduce((s, r) => s + r.alerts.expiring.length, 0);
-  const activeUsers = users.filter(u => u.status === "active").length;
+  const activeUsers = users.filter(u => u.status === "active" && u.role !== "admin").length;
 
   // task-type coverage across all monitored staff
   const coverage = TASK_TYPES.map(t => ({
@@ -262,6 +264,87 @@ export function UserManagement({ users, onRegister, onUpdateUser, selfEmail }) {
             ))}
           </tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+/* ==================== LOGBOOK FORM TEMPLATE ==================== */
+export function FormTemplateAdmin({ template, onSave, onReset }) {
+  const tpl = mergeTemplate(template);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
+  const [drag, setDrag] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleFile = (file) => {
+    if (!file) return;
+    if (!/\.docx$/i.test(file.name)) { setErr("Please choose a Word .docx file (not .doc or .pdf)."); setOk(""); return; }
+    setBusy(true); setErr(""); setOk("");
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const { template: parsed, parsed: info } = await parseFormDocx(e.target.result);
+        onSave(parsed);
+        setOk(`Form template updated from "${file.name}" — matched ${info.columnsMatched} column labels${info.legendLines.length ? `, ${info.legendLines.length} legend lines` : ""}. The logbook table and PDF export now use this layout.`);
+        setBusy(false);
+      } catch (er) { setErr(er.message || "Could not read this Word form."); setBusy(false); }
+    };
+    reader.onerror = () => { setErr("Could not read the file."); setBusy(false); };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const isCustom = !!template;
+  const colRows = [
+    ["date", "location", "acType", "acReg"], ["rating", "privilege", "ata", "details"],
+    ["duration", "ref", "remark", "taskType"],
+  ];
+
+  return (
+    <div className="page">
+      <header className="page-head">
+        <div><div className="eyebrow">Administration</div><h2 className="page-title">Logbook form template</h2></div>
+        {isCustom && <button className="btn btn-ghost" onClick={() => { onReset(); setOk("Reverted to the built-in K-Mile form."); setErr(""); }}><RotateCcw size={16} /> Reset to default</button>}
+      </header>
+      <div className="credit-note"><Info size={16} /> If the official logbook form is revised, upload the new Word (<b>.docx</b>) form here. The app reads its <b>title, column headers and legend</b> and applies them to the on-screen logbook table and the exported PDF. The 7 task types and 4 activity types stay fixed — only labels/wording change.</div>
+
+      <div className="panel form-panel">
+        <div className="form-panel-title"><FileText size={15} style={{ verticalAlign: "-2px" }} /> Upload a revised form (.docx)</div>
+        <div className={"dropzone " + (drag ? "dropzone-active" : "")}
+          onDragOver={e => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={e => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }}
+          onClick={() => fileRef.current?.click()}>
+          <UploadCloud size={34} strokeWidth={1.6} />
+          <div className="dz-title">{busy ? "Reading form…" : "Drop the revised logbook .docx here"}</div>
+          <div className="dz-sub">or click to browse</div>
+          <input ref={fileRef} type="file" accept=".docx" hidden onChange={e => handleFile(e.target.files[0])} />
+        </div>
+        {err && <div className="form-err" style={{ marginTop: 14 }}>{err}</div>}
+        {ok && <div className="form-ok" style={{ marginTop: 14 }}>{ok}</div>}
+      </div>
+
+      <div className="panel">
+        <div className="panel-head"><span>Active form — {isCustom ? "custom (uploaded)" : "built-in default"}</span><span className="count-tag">{tpl.title}</span></div>
+        <table className="doc-tbl" style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+          <tbody>
+            {colRows.map((r, i) => (
+              <tr key={i}>
+                {r.map(k => (
+                  <td key={k} style={{ border: "1px solid var(--line)", padding: "8px 10px" }}>
+                    <div className="sub-email">{k}</div><b>{tpl.columns[k]}</b>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="type-mini" style={{ marginTop: 12 }}>
+          {TT.map(t => <span key={t.k} className="type-mini-item"><b>{tpl.taskCols[t.k] || t.label}</b></span>)}
+          {["TRAINING", "PERFORM", "SUPERVISE", "CRS"].map(k => <span key={k} className="type-mini-item tag-blue" style={{ color: "var(--blue)" }}><b>{tpl.activityCols[k] || k}</b></span>)}
+        </div>
+        <div className="panel-foot"><b>Legend:</b> {tpl.legend.join("  ·  ")}</div>
       </div>
     </div>
   );

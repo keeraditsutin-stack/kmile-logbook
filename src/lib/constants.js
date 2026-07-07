@@ -49,3 +49,43 @@ export const SIMILAR_MIN_PCT = 0.30;
 export const FULL_DAY_HOURS = 7;
 export const MAX_GAP_DAYS = 122; // ~4 months
 export const EXPIRY_WARN_DAYS = 60;
+
+/* ============================ LOGBOOK FORM TEMPLATE ============================
+   Drives the labels/title/legend of the logbook table and the exported PDF.
+   Admins can override it by uploading a revised Word (.docx) form. The 7 task
+   types + 4 activity types data model is fixed; only labels/title/legend and
+   the declaration/signature captions change. */
+export const DEFAULT_FORM_TEMPLATE = {
+  title: "Aircraft Maintenance Experience Logbook",
+  columns: {
+    date: "DATE",
+    location: "LOCATION",
+    acType: "A/C or COMP (TYPE)",
+    acReg: "A/C REG. OR COMP S/N",
+    rating: "TYPE OF MAINT. (RATING)",
+    privilege: "PRIVILEGE USED",
+    taskType: "TASK TYPE",
+    activity: "TYPE OF ACTIVITY",
+    ata: "ATA",
+    details: "TASK DETAILS",
+    duration: "TIME DURATION (HOUR)",
+    ref: "MAINTENANCE RECORD REFERENCE",
+    remark: "REMARK",
+  },
+  // sub-column headers, keyed to the fixed data model
+  taskCols: { FOT: "FOT", SGH: "SGH", RI: "R/I", TS: "T/S", OPC: "OPC", REP: "REP", INSP: "INSP" },
+  activityCols: { TRAINING: "TRAINING", PERFORM: "PERFORM", SUPERVISE: "SUPERVISE", CRS: "CRS" },
+  legend: [
+    "FOT: Functional Operational Test",
+    "SGH: Servicing Ground Handling",
+    "R/I: Removal Installation Activation",
+    "T/S: Trouble Shooting Exercise",
+    "OPC: Operational Check",
+    "REP: Replacement",
+    "INSP: Inspection",
+    "CRS: Certificate of Release to Service",
+  ],
+  declaration: "I declare that the entries in this logbook are completed and true.",
+  signatureCaption: "Logbook Owner's Signature",
+  dateCaption: "Date",
+};

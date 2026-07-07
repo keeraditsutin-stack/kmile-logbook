@@ -3,3 +3,5 @@ dist
 .DS_Store
 *.local
 .claude/settings.local.json
+
+.claude/scheduled_tasks.lock
