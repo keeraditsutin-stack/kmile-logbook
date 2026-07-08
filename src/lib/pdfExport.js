@@ -48,7 +48,7 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
 
   // black & white, Arial-equivalent (Helvetica), no bold anywhere
   const INK = [0, 0, 0];
-  const TOP = 92, BOTTOM = 150;
+  const TOP = 92, BOTTOM = 162;
   const chk = { halign: "center", cellWidth: 15 };
   autoTable(doc, {
     head, body, startY: TOP, margin: { top: TOP, left: 22, right: 22, bottom: BOTTOM },
@@ -101,18 +101,19 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
     colA.forEach((l, i) => doc.text(l, 38, H - BOTTOM + 46 + i * 10));
     colB.forEach((l, i) => doc.text(l, 210, H - BOTTOM + 46 + i * 10));
 
-    // declaration (left, below legend) — kept clear of the signature on the right
-    doc.setFontSize(8); doc.text(tpl.declaration, 22, H - 40);
-
-    // signature block (right side, cannot overlap the declaration on the left)
+    // declaration + signature stacked on the right: statement on TOP, then the
+    // signature well below it so the signature can never cover the statement
     const sigRight = W - 22, sigLeftX = W - 250;
-    if (profile.signature) { try { doc.addImage(profile.signature, "PNG", sigLeftX + 6, H - 74, 110, 28); } catch { /* skip bad image */ } }
-    doc.setDrawColor(...INK); doc.setLineWidth(0.5);
-    doc.line(sigLeftX, H - 44, sigLeftX + 140, H - 44);           // signature line
-    doc.line(sigLeftX + 152, H - 44, sigRight, H - 44);           // date line
+    const blockMid = (sigLeftX + sigRight) / 2;
     doc.setFontSize(8);
-    doc.text(tpl.signatureCaption, sigLeftX, H - 34);
-    doc.text(`${tpl.dateCaption}: ${exportedOn}`, sigLeftX + 152, H - 34);
+    doc.text(tpl.declaration, blockMid, H - 78, { align: "center" });   // statement (top)
+    if (profile.signature) { try { doc.addImage(profile.signature, "PNG", sigLeftX + 6, H - 66, 110, 24); } catch { /* skip bad image */ } }
+    doc.setDrawColor(...INK); doc.setLineWidth(0.5);
+    doc.line(sigLeftX, H - 40, sigLeftX + 140, H - 40);           // signature line
+    doc.line(sigLeftX + 152, H - 40, sigRight, H - 40);           // date line
+    doc.setFontSize(8);
+    doc.text(tpl.signatureCaption, sigLeftX, H - 30);
+    doc.text(`${tpl.dateCaption}: ${exportedOn}`, sigLeftX + 152, H - 30);
 
     // bottom band: company (left) + page (center) + form no. (right)
     doc.setDrawColor(...INK); doc.setLineWidth(0.5); doc.line(22, H - 22, W - 22, H - 22);
