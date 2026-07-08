@@ -9,11 +9,20 @@ import { DEFAULT_FORM_TEMPLATE } from "./constants.js";
 import { mergeTemplate } from "./formTemplate.js";
 import { KMILE_LOGO, KMILE_LOGO_RATIO } from "./logo.js";
 
-const CHK = "√";
 // compact grid labels for the narrow check columns (group headers still match)
 const TASK_ORDER = ["FOT", "SGH", "RI", "TS", "OPC", "REP", "INSP"];
 const ACT_ORDER = ["TRAINING", "PERFORM", "SUPERVISE", "CRS"];
 const ACT_SHORT = { TRAINING: "TRN", PERFORM: "PRF", SUPERVISE: "SUP", CRS: "CRS" };
+const FIRST_CHK_COL = 6, LAST_CHK_COL = 16; // 7 task + 4 activity columns
+
+// draw a crisp vector tick (✓) centred in a cell — reliable in any PDF font
+function drawTick(doc, cell) {
+  const cx = cell.x + cell.width / 2, cy = cell.y + cell.height / 2;
+  doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.8); doc.setLineCap("round");
+  doc.line(cx - 2.4, cy + 0.4, cx - 0.6, cy + 2.4);   // short down-stroke
+  doc.line(cx - 0.6, cy + 2.4, cx + 3.0, cy - 2.4);   // long up-stroke
+  doc.setLineCap("butt");
+}
 
 export async function exportLogbookPdf(records, profile, formTemplate) {
   const tpl = mergeTemplate(formTemplate || DEFAULT_FORM_TEMPLATE);
@@ -39,30 +48,56 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
       ...ACT_ORDER.map(k => ({ content: ACT_SHORT[k] || k })),
     ],
   ];
+  // ticks are drawn as vectors in didDrawCell; check cells stay empty in the body
+  const checkMatrix = recs.map(r => [
+    r.tasks?.FOT, r.tasks?.SGH, r.tasks?.RI, r.tasks?.TS, r.tasks?.OPC, r.tasks?.REP, r.tasks?.INSP,
+    r.activity?.TRAINING, r.activity?.PERFORM, r.activity?.SUPERVISE, r.activity?.CRS,
+  ].map(Boolean));
   const body = recs.map((r, idx) => ([
     fmtDMY(r.date), r.location || "", r.acType || "", r.acReg || "", r.rating || "", r.privilege === "-" ? "" : (r.privilege || ""),
-    r.tasks?.FOT ? CHK : "", r.tasks?.SGH ? CHK : "", r.tasks?.RI ? CHK : "", r.tasks?.TS ? CHK : "", r.tasks?.OPC ? CHK : "", r.tasks?.REP ? CHK : "", r.tasks?.INSP ? CHK : "",
-    r.activity?.TRAINING ? CHK : "", r.activity?.PERFORM ? CHK : "", r.activity?.SUPERVISE ? CHK : "", r.activity?.CRS ? CHK : "",
+    "", "", "", "", "", "", "", "", "", "", "",
     r.ata || "", r.details || "", r.duration || "", r.ref || "", r.supervisedBy || "", r.remark || String(idx + 1),
   ]));
 
   // black & white, Arial-equivalent (Helvetica), no bold anywhere
   const INK = [0, 0, 0];
   const TOP = 92, BOTTOM = 162;
-  const chk = { halign: "center", cellWidth: 15 };
+  const chk = { cellWidth: 15 };
+  // all other columns are fixed; TASK DETAILS takes the remaining width so the
+  // table exactly fills the page (date+loc+actype+reg+rating+priv = 214,
+  // 11 checks = 165, ata+dur+ref+sup+remark = 214 → 593 total)
+  const DETAILS_W = (W - 44) - 593;
   autoTable(doc, {
     head, body, startY: TOP, margin: { top: TOP, left: 22, right: 22, bottom: BOTTOM },
-    // fit the table to the page; text columns auto-size to their content and
-    // rows grow to fit wrapped text (linebreak) on every export
+    // fit the table to the page; text columns auto-size to their content
     tableWidth: W - 44,
-    // no table fill colours; thin black grid only
-    styles: { font: "helvetica", fontStyle: "normal", fontSize: 6.4, cellPadding: 2, overflow: "linebreak", valign: "middle", textColor: INK, lineColor: INK, lineWidth: 0.4, fillColor: false },
+    // no table fill colours; thin black grid only; all text centred (middle)
+    styles: { font: "helvetica", fontStyle: "normal", fontSize: 6.2, cellPadding: 2, overflow: "linebreak", halign: "center", valign: "middle", textColor: INK, lineColor: INK, lineWidth: 0.4, fillColor: false },
     headStyles: { font: "helvetica", fontStyle: "normal", fontSize: 6, halign: "center", valign: "middle", textColor: INK, fillColor: false, lineColor: INK, lineWidth: 0.4 },
     bodyStyles: { fillColor: false },
     columnStyles: {
       0: { cellWidth: 42 }, 1: { cellWidth: 28 }, 2: { cellWidth: 38 }, 3: { cellWidth: 44 }, 4: { cellWidth: 34 }, 5: { cellWidth: 28 },
       6: chk, 7: chk, 8: chk, 9: chk, 10: chk, 11: chk, 12: chk, 13: chk, 14: chk, 15: chk, 16: chk,
-      17: { cellWidth: 22, halign: "center" }, 18: { cellWidth: "auto" }, 19: { cellWidth: 24, halign: "center" }, 20: { cellWidth: "auto" }, 21: { cellWidth: "auto" }, 22: { cellWidth: 36, halign: "center" },
+      // TASK DETAILS (the row subject) is a fixed width and shrink-to-fit onto one line
+      17: { cellWidth: 22 }, 18: { cellWidth: DETAILS_W }, 19: { cellWidth: 24 }, 20: { cellWidth: 66 }, 21: { cellWidth: 66 }, 22: { cellWidth: 36 },
+    },
+    // keep the row subject (TASK DETAILS) on a single line by shrinking its
+    // font just enough to fit the fixed column width — never wraps
+    didParseCell: (data) => {
+      if (data.section === "body" && data.column.index === 18) {
+        const txt = String(data.cell.raw || "");
+        if (!txt) return;
+        const avail = DETAILS_W - 4; // minus L/R padding (2 + 2)
+        let fs = 6.2;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(fs);
+        while (fs > 3.6 && doc.getTextWidth(txt) > avail) { fs -= 0.2; doc.setFontSize(fs); }
+        data.cell.styles.fontSize = fs;
+      }
+    },
+    didDrawCell: (data) => {
+      if (data.section === "body" && data.column.index >= FIRST_CHK_COL && data.column.index <= LAST_CHK_COL) {
+        if (checkMatrix[data.row.index]?.[data.column.index - FIRST_CHK_COL]) drawTick(doc, data.cell);
+      }
     },
     didDrawPage: () => {
       // ---- header: K-Mile logo (top-left) + centered title + identity row ----
