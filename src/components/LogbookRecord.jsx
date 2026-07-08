@@ -75,7 +75,7 @@ export default function LogbookRecord({ records, profile, formTemplate, training
             </Field>
             <Field label="Privilege used">
               <select className="input" value={form.privilege} onChange={e => setForm({ ...form, privilege: e.target.value })}>
-                <option value="-">—</option><option>Similar aircraft</option><option>Type authorization</option>
+                <option value="-">—</option><option>B1</option><option>B2</option><option>B1/B2</option>
               </select>
             </Field>
             <Field label="ATA"><input className="input mono" placeholder="21" value={form.ata} onChange={e => setForm({ ...form, ata: e.target.value })} /></Field>

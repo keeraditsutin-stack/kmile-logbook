@@ -35,6 +35,7 @@ function matchColumnField(text) {
   if (t === "ATA") return "ata";
   if (t.includes("DETAIL") || t.includes("DESCRIPTION") || t.includes("JOB")) return "details";
   if (t.includes("DURATION") || t.includes("HOUR") || t.includes("HRS") || t.includes("HR)") || t.includes("TIME")) return "duration";
+  if (t.includes("SUPERVISION")) return "supervision";
   if (t.includes("REFERENCE") || t.includes("MAINT") || t.includes("RECORD")) return "ref";
   if (t.includes("REMARK")) return "remark";
   return null;

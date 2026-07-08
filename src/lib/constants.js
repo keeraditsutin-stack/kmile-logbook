@@ -70,6 +70,7 @@ export const DEFAULT_FORM_TEMPLATE = {
     details: "TASK DETAILS",
     duration: "TIME DURATION (HOUR)",
     ref: "MAINTENANCE RECORD REFERENCE",
+    supervision: "SUPERVISION BY (IF REQUIRED)",
     remark: "REMARK",
   },
   // sub-column headers, keyed to the fixed data model

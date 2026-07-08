@@ -32,7 +32,7 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
       { content: C.taskType, colSpan: 7 }, { content: C.activity, colSpan: 4 },
       { content: C.ata, rowSpan: 2 }, { content: C.details, rowSpan: 2 },
       { content: twoLine(C.duration), rowSpan: 2 }, { content: twoLine(C.ref), rowSpan: 2 },
-      { content: C.remark, rowSpan: 2 },
+      { content: twoLine(C.supervision), rowSpan: 2 }, { content: C.remark, rowSpan: 2 },
     ],
     [
       ...TASK_ORDER.map(k => ({ content: tpl.taskCols[k] || k })),
@@ -43,7 +43,7 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
     fmtDMY(r.date), r.location || "", r.acType || "", r.acReg || "", r.rating || "", r.privilege === "-" ? "" : (r.privilege || ""),
     r.tasks?.FOT ? CHK : "", r.tasks?.SGH ? CHK : "", r.tasks?.RI ? CHK : "", r.tasks?.TS ? CHK : "", r.tasks?.OPC ? CHK : "", r.tasks?.REP ? CHK : "", r.tasks?.INSP ? CHK : "",
     r.activity?.TRAINING ? CHK : "", r.activity?.PERFORM ? CHK : "", r.activity?.SUPERVISE ? CHK : "", r.activity?.CRS ? CHK : "",
-    r.ata || "", r.details || "", r.duration || "", r.ref || "", r.remark || String(idx + 1),
+    r.ata || "", r.details || "", r.duration || "", r.ref || "", r.supervisedBy || "", r.remark || String(idx + 1),
   ]));
 
   // black & white, Arial-equivalent (Helvetica), no bold anywhere
@@ -52,14 +52,17 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
   const chk = { halign: "center", cellWidth: 15 };
   autoTable(doc, {
     head, body, startY: TOP, margin: { top: TOP, left: 22, right: 22, bottom: BOTTOM },
+    // fit the table to the page; text columns auto-size to their content and
+    // rows grow to fit wrapped text (linebreak) on every export
+    tableWidth: W - 44,
     // no table fill colours; thin black grid only
     styles: { font: "helvetica", fontStyle: "normal", fontSize: 6.4, cellPadding: 2, overflow: "linebreak", valign: "middle", textColor: INK, lineColor: INK, lineWidth: 0.4, fillColor: false },
     headStyles: { font: "helvetica", fontStyle: "normal", fontSize: 6, halign: "center", valign: "middle", textColor: INK, fillColor: false, lineColor: INK, lineWidth: 0.4 },
     bodyStyles: { fillColor: false },
     columnStyles: {
-      0: { cellWidth: 44 }, 1: { cellWidth: 30 }, 2: { cellWidth: 38 }, 3: { cellWidth: 44 }, 4: { cellWidth: 38 }, 5: { cellWidth: 34 },
+      0: { cellWidth: 42 }, 1: { cellWidth: 28 }, 2: { cellWidth: 38 }, 3: { cellWidth: 44 }, 4: { cellWidth: 34 }, 5: { cellWidth: 28 },
       6: chk, 7: chk, 8: chk, 9: chk, 10: chk, 11: chk, 12: chk, 13: chk, 14: chk, 15: chk, 16: chk,
-      17: { cellWidth: 24, halign: "center" }, 18: { cellWidth: "auto" }, 19: { cellWidth: 26, halign: "center" }, 20: { cellWidth: 70 }, 21: { cellWidth: 34, halign: "center" },
+      17: { cellWidth: 22, halign: "center" }, 18: { cellWidth: "auto" }, 19: { cellWidth: 24, halign: "center" }, 20: { cellWidth: "auto" }, 21: { cellWidth: "auto" }, 22: { cellWidth: 36, halign: "center" },
     },
     didDrawPage: () => {
       // ---- header: K-Mile logo (top-left) + centered title + identity row ----
