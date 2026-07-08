@@ -1,9 +1,10 @@
 import { useState, useMemo, useRef } from "react";
-import { Plus, Trash2, Download, Search, Edit3, FileSpreadsheet } from "lucide-react";
+import { Plus, Trash2, Download, Search, Edit3, FileSpreadsheet, GraduationCap } from "lucide-react";
 import { Field } from "./ui.jsx";
 import { ImportModal, ExportModal } from "./modals.jsx";
 import { AIRCRAFT_TYPES, RATINGS, TASK_TYPES, ACTIVITY_TYPES, EXP_CATEGORIES, DEFAULT_FORM_TEMPLATE } from "../lib/constants.js";
 import { uid, todayISO, fmtDate } from "../lib/helpers.js";
+import { trainingStatus } from "../lib/assess.js";
 
 const emptyRecord = () => ({
   date: todayISO(), location: "", acType: "B737-400", acReg: "", rating: "A1", privilege: "-",
@@ -11,7 +12,7 @@ const emptyRecord = () => ({
   remark: "", category: "direct",
 });
 
-export default function LogbookRecord({ records, profile, formTemplate, onAdd, onUpdate, onDelete, onImport, readOnly }) {
+export default function LogbookRecord({ records, profile, formTemplate, training, onAdd, onUpdate, onDelete, onImport, readOnly }) {
   const cols = { ...DEFAULT_FORM_TEMPLATE.columns, ...(formTemplate?.columns || {}) };
   const [form, setForm] = useState(emptyRecord());
   const [editing, setEditing] = useState(null);
@@ -19,6 +20,7 @@ export default function LogbookRecord({ records, profile, formTemplate, onAdd, o
   const [open, setOpen] = useState(!readOnly);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [showTraining, setShowTraining] = useState(true);
   const topRef = useRef(null);
 
   const toggle = (grp, k) => setForm(f => ({ ...f, [grp]: { ...f[grp], [k]: !f[grp]?.[k] } }));
@@ -29,11 +31,21 @@ export default function LogbookRecord({ records, profile, formTemplate, onAdd, o
   };
   const startEdit = (r) => { setForm({ ...emptyRecord(), ...r }); setEditing(r.id); setOpen(true); topRef.current?.scrollIntoView({ behavior: "smooth" }); };
 
+  // valid training records (not expired, not failed) shown combined in the logbook
+  const trainingRows = useMemo(() => (training || [])
+    .filter(t => t.result !== "Fail" && trainingStatus(t).state !== "expired")
+    .map(t => ({
+      id: "trn_" + t.id, _training: true, date: t.date, location: "", acType: t.acType,
+      acReg: "", rating: "", privilege: "-", tasks: {}, activity: { TRAINING: true },
+      ata: "", details: t.course, duration: "", ref: t.ref, supervisedBy: t.org || "", remark: t.category,
+    })), [training]);
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return [...records].sort((a, b) => b.date.localeCompare(a.date))
+    const base = showTraining ? [...records, ...trainingRows] : [...records];
+    return base.sort((a, b) => b.date.localeCompare(a.date))
       .filter(r => !s || [r.details, r.acType, r.acReg, r.location, r.ata, r.ref].some(v => (v || "").toLowerCase().includes(s)));
-  }, [records, q]);
+  }, [records, trainingRows, showTraining, q]);
 
   return (
     <div className="page" ref={topRef}>
@@ -104,17 +116,41 @@ export default function LogbookRecord({ records, profile, formTemplate, onAdd, o
 
       <div className="table-tools">
         <div className="search"><Search size={15} /><input placeholder="Search records…" value={q} onChange={e => setQ(e.target.value)} /></div>
-        <span className="count-tag">{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
+        <div className="tools-right">
+          {trainingRows.length > 0 && (
+            <label className="training-toggle">
+              <input type="checkbox" checked={showTraining} onChange={e => setShowTraining(e.target.checked)} />
+              <GraduationCap size={14} /> Include valid training ({trainingRows.length})
+            </label>
+          )}
+          <span className="count-tag">{records.length} logbook{showTraining && trainingRows.length > 0 ? ` · ${trainingRows.length} training` : ""}</span>
+        </div>
       </div>
 
       <div className="table-wrap">
         {filtered.length === 0 ? <div className="empty">No records yet. Add your first maintenance task above.</div> : (
           <table className="tbl">
             <thead><tr>
-              <th>{cols.date}</th><th>{cols.location}</th><th>{cols.acType}</th><th>{cols.acReg}</th><th>{cols.rating}</th><th>{cols.taskType}</th><th>{cols.activity}</th><th>{cols.ata}</th><th>{cols.details}</th><th>{cols.duration}</th><th>{cols.ref}</th>{!readOnly && <th></th>}
+              <th>{cols.date}</th><th>{cols.location}</th><th>{cols.acType}</th><th>{cols.acReg}</th><th>{cols.rating}</th><th>{cols.taskType}</th><th>{cols.activity}</th><th>{cols.ata}</th><th>{cols.details}</th><th>{cols.duration}</th><th>{cols.ref}</th><th>Supervision by</th>{!readOnly && <th></th>}
             </tr></thead>
             <tbody>
-              {filtered.map(r => (
+              {filtered.map(r => r._training ? (
+                <tr key={r.id} className="row-training">
+                  <td className="mono nowrap">{fmtDate(r.date)}</td>
+                  <td>—</td>
+                  <td className="mono">{r.acType}</td>
+                  <td className="mono">—</td>
+                  <td>—</td>
+                  <td className="cell-tags">—</td>
+                  <td className="cell-tags">{ACTIVITY_TYPES.filter(t => r.activity?.[t.k]).map(t => <span key={t.k} className="tag tag-blue">{t.label}</span>)}</td>
+                  <td className="mono">—</td>
+                  <td className="cell-details">{r.details} <span className="tag tag-amber"><GraduationCap size={10} style={{ verticalAlign: "-1px" }} /> Training</span></td>
+                  <td className="mono">—</td>
+                  <td className="mono">{r.ref || "—"}</td>
+                  <td>{r.supervisedBy || "—"}</td>
+                  {!readOnly && <td className="cell-actions"><span className="you-tag">from Training</span></td>}
+                </tr>
+              ) : (
                 <tr key={r.id}>
                   <td className="mono nowrap">{fmtDate(r.date)}</td>
                   <td>{r.location || "—"}</td>
@@ -127,6 +163,7 @@ export default function LogbookRecord({ records, profile, formTemplate, onAdd, o
                   <td className="cell-details">{r.details}</td>
                   <td className="mono">{r.duration || "—"}</td>
                   <td className="mono">{r.ref || "—"}</td>
+                  <td>{r.supervisedBy || "—"}</td>
                   {!readOnly && <td className="cell-actions">
                     <button className="icon-btn" onClick={() => startEdit(r)} title="Edit"><Edit3 size={15} /></button>
                     <button className="icon-btn icon-danger" onClick={() => onDelete(r.id)} title="Delete"><Trash2 size={15} /></button>

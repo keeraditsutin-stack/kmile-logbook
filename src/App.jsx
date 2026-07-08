@@ -150,7 +150,7 @@ export default function App() {
 
       <main className="main">
         {tab === "dashboard" && <Dashboard profile={current} records={myLogs} training={myTraining} />}
-        {tab === "logbook" && <LogbookRecord records={myLogs} profile={current} formTemplate={formTemplate} onAdd={addLog} onUpdate={updateLog} onDelete={deleteLog} onImport={importLogs} />}
+        {tab === "logbook" && <LogbookRecord records={myLogs} profile={current} formTemplate={formTemplate} training={myTraining} onAdd={addLog} onUpdate={updateLog} onDelete={deleteLog} onImport={importLogs} />}
         {tab === "training" && <TrainingRecord records={myTraining} onAdd={addTr} onDelete={deleteTr} onImport={importTr} />}
         {tab === "guideline" && <UserGuide />}
         {tab === "admin-dash" && isAdmin && !viewingUser && (
@@ -168,7 +168,7 @@ export default function App() {
             <div className="view-banner"><Users size={16} /> Viewing <b>{viewingUser.name}</b> ({viewingUser.email})</div>
             <Dashboard profile={viewingUser} records={logbook[viewingUser.email] || []} training={training[viewingUser.email] || []} />
             <TrainingRecord records={training[viewingUser.email] || []} readOnly onAdd={() => {}} onDelete={() => {}} onImport={() => {}} />
-            <LogbookRecord records={logbook[viewingUser.email] || []} profile={viewingUser} formTemplate={formTemplate} readOnly onAdd={() => {}} onUpdate={() => {}} onDelete={() => {}} />
+            <LogbookRecord records={logbook[viewingUser.email] || []} profile={viewingUser} formTemplate={formTemplate} training={training[viewingUser.email] || []} readOnly onAdd={() => {}} onUpdate={() => {}} onDelete={() => {}} />
           </div>
         )}
       </main>
