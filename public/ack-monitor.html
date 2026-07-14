@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>K-Mile Air · Document Acknowledgement Monitor</title>
+<style>
+:root{
+  --fs:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans Thai',sans-serif;
+  --fm:ui-monospace,'Cascadia Mono','Segoe UI Mono',Consolas,Menlo,monospace;
+  --ink:#0b1b2b;--ink2:#20364a;--bg:#edf1f6;--card:#fff;
+  --line:#d4dce6;--line2:#e8edf3;--mu:#5c6f80;--mu2:#8496a6;
+  --brand:#12558f;--brand2:#0d4373;--brandT:#e7f0f8;
+  --bar:#4472c4;--ok:#1f9d6b;--okT:#e4f4ee;
+  --warn:#d97706;--warnT:#fef3c7;--err:#dc2626;--errT:#fee2e2;
+  --amber:#f0c04a;--xlg:#7f9a3f;--xlgT:#eef3e2;
+  --sh:0 1px 3px rgba(11,27,43,.07),0 6px 20px rgba(11,27,43,.07);
+  color-scheme:light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--fs);color:var(--ink);background:var(--bg);
+  background-image:radial-gradient(circle at 1px 1px,rgba(18,85,143,.04) 1px,transparent 0);
+  background-size:24px 24px;-webkit-font-smoothing:antialiased;line-height:1.5}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px 72px}
+
+header{background:linear-gradient(120deg,#0b1b2b 0%,#12314b 55%,var(--brand2) 100%);color:#fff;border-bottom:3px solid var(--amber)}
+.mast{max-width:1280px;margin:0 auto;padding:18px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{width:48px;height:48px;flex:none;border-radius:9px;background:linear-gradient(160deg,#fff,#dfeaf3);
+  display:grid;place-items:center;font-weight:700;font-size:10.5px;color:var(--brand2);line-height:1.15;text-align:center}
+.logo small{font-size:8px;font-weight:600;color:var(--brand);display:block}
+.mast-t .ey{font-family:var(--fm);font-size:9.5px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:2px}
+.mast-t h1{font-weight:700;font-size:18.5px;letter-spacing:-.2px}
+.mast-t .sub{font-size:11.5px;color:#b9cbdb;margin-top:1px}
+.mast-r{margin-left:auto;text-align:right;font-size:10.5px;color:#9fb6cb;font-family:var(--fm)}
+.mast-r b{color:#fff}
+.live-badge{display:inline-flex;align-items:center;gap:5px;font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:100px;padding:3px 8px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px rgba(31,157,107,.3);flex:none}
+.dot.off{background:var(--mu2);box-shadow:none}
+
+nav{display:flex;max-width:1280px;margin:0 auto;padding:0 20px;gap:2px;position:sticky;top:0;z-index:30;
+  background:var(--bg);border-bottom:1px solid var(--line)}
+nav button{appearance:none;border:0;background:transparent;cursor:pointer;padding:13px 15px 11px;
+  font-weight:600;font-size:12.5px;color:var(--mu);font-family:var(--fs);
+  border-bottom:2.5px solid transparent;margin-bottom:-1px;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:color .12s}
+nav button:hover{color:var(--ink2)}
+nav button.on{color:var(--brand);border-bottom-color:var(--brand)}
+nav button:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;border-radius:4px}
+.nbadge{font-size:9.5px;font-family:var(--fm);background:var(--err);color:#fff;border-radius:100px;padding:1px 6px}
+
+.panel{display:none;padding-top:22px;animation:fup .18s ease}
+.panel.on{display:block}
+@keyframes fup{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.panel{animation:none}}
+
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+.g2{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+@media(max-width:900px){.g2{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,1fr)}}
+
+.card{background:var(--card);border:1px solid var(--line2);border-radius:13px;box-shadow:var(--sh)}
+.ch{padding:12px 15px 10px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ch h3{font-weight:600;font-size:13.5px;margin:0}
+.cb{padding:13px 15px 16px}
+
+.kpi{background:var(--card);border:1px solid var(--line2);border-radius:11px;padding:12px 13px;box-shadow:var(--sh);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--brand)}
+.kpi.e::before{background:var(--err)}.kpi.w::before{background:var(--warn)}.kpi.ok::before{background:var(--ok)}.kpi.b::before{background:var(--bar)}
+.kpi .l{font-size:10px;color:var(--mu);font-weight:500}
+.kpi .v{font-weight:700;font-size:26px;line-height:1.1;margin-top:3px;letter-spacing:-.8px;font-variant-numeric:tabular-nums}
+.kpi .c{font-size:10px;color:var(--mu2);margin-top:2px;font-family:var(--fm)}
+
+.btn{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink2);font-family:var(--fs);font-weight:600;
+  font-size:12px;padding:7px 11px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;transition:.12s}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.btn.p{background:var(--brand);border-color:var(--brand);color:#fff}.btn.p:hover{background:var(--brand2)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}.btn.ok:hover{background:#178a5a}
+.btn.g{background:transparent;border-color:transparent}
+.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
+.btn svg{width:13px;height:13px;flex:none}
+select.sel{font-family:var(--fs);font-size:11.5px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:7px;padding:5px 7px;cursor:pointer}
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg button{appearance:none;border:0;background:transparent;font-family:var(--fs);font-weight:500;font-size:11px;
+  color:var(--mu);padding:4px 9px;border-radius:6px;cursor:pointer}
+.seg button.on{background:#fff;color:var(--brand);box-shadow:0 1px 2px rgba(11,27,43,.1);font-weight:600}
+input.inp{font-family:var(--fs);font-size:12px;color:var(--ink);background:#fff;border:1px solid var(--line);
+  border-radius:8px;padding:6px 9px;outline:none;transition:border-color .12s}
+input.inp:focus{border-color:var(--brand)}
+.srch{width:210px;max-width:100%}
+
+.chart-wrap{position:relative;height:400px}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:#fff;font-size:11px;font-family:var(--fm);
+  padding:5px 9px;border-radius:7px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:5;transform:translate(-50%,-115%)}
+
+.pvt-wrap{overflow:auto;border:1px solid var(--line2);border-radius:9px;max-height:450px}
+table.pvt{border-collapse:collapse;width:100%;font-size:12px}
+table.pvt thead th{position:sticky;top:0;background:var(--xlg);color:#fff;padding:8px 11px;text-align:left;font-weight:600;font-size:11px}
+table.pvt thead th.r{text-align:right}
+table.pvt tbody td{padding:6px 11px;border-bottom:1px solid var(--line2)}
+table.pvt tbody td.r{text-align:right;font-family:var(--fm);font-size:11px;font-variant-numeric:tabular-nums}
+table.pvt tbody tr{cursor:pointer}
+table.pvt tbody tr:nth-child(even){background:#f9fbf5}
+table.pvt tbody tr:hover{background:#eff4e6}
+table.pvt tfoot td{position:sticky;bottom:0;padding:8px 11px;border-top:2px solid var(--xlg);font-weight:700;background:var(--xlgT)}
+table.pvt tfoot td.r{text-align:right;font-family:var(--fm)}
+
+.tbl-wrap{overflow:auto;border:1px solid var(--line2);border-radius:12px;box-shadow:var(--sh);background:#fff}
+table.dt{border-collapse:collapse;width:100%;font-size:12px}
+table.dt thead th{position:sticky;top:0;background:#f5f8fb;text-align:left;font-weight:600;font-size:10.5px;padding:9px 11px;
+  border-bottom:1.5px solid var(--line);color:var(--ink2);white-space:nowrap;cursor:pointer;user-select:none;z-index:2}
+table.dt thead th:hover{color:var(--brand)}
+table.dt thead th.r{text-align:right}
+table.dt tbody td{padding:7px 11px;border-bottom:1px solid var(--line2);vertical-align:middle}
+table.dt tbody td.r{text-align:right;font-family:var(--fm);font-size:11.5px;font-variant-numeric:tabular-nums}
+table.dt tbody tr:hover{background:#f5f9fc}
+.chip{font-weight:600;font-size:11.5px}
+.pill{display:inline-flex;align-items:center;font-size:10px;font-weight:600;padding:2px 7px;border-radius:100px;font-family:var(--fm)}
+.pill.ok{background:var(--okT);color:#136b44}.pill.w{background:var(--warnT);color:#92400e}.pill.e{background:var(--errT);color:#991b1b}
+.pill.n{background:var(--bg);color:var(--mu)}
+.barm{height:5px;border-radius:3px;background:var(--line);position:relative;overflow:hidden;min-width:60px;display:inline-block}
+.barm i{position:absolute;left:0;top:0;bottom:0;background:var(--err);border-radius:3px}
+
+.drop{border:2px dashed var(--line);border-radius:13px;background:var(--card);padding:32px 18px;text-align:center;transition:.15s;cursor:pointer}
+.drop:hover,.drop.drag{border-color:var(--brand);background:var(--brandT)}
+.drop .di{width:48px;height:48px;border-radius:11px;background:var(--brandT);color:var(--brand);display:grid;place-items:center;margin:0 auto 10px}
+.drop h3{font-size:14.5px;margin:0 0 3px}
+.drop p{margin:0;color:var(--mu);font-size:12px}
+
+.callout{border:1px solid var(--line2);border-left:3px solid var(--brand);background:var(--card);
+  border-radius:9px;padding:11px 13px;font-size:12px;color:var(--ink2);box-shadow:var(--sh)}
+.callout.w{border-left-color:var(--warn)}.callout.ok{border-left-color:var(--ok)}.callout.e{border-left-color:var(--err)}
+.callout code{font-family:var(--fm);background:var(--bg);padding:1px 5px;border-radius:4px;font-size:10.5px;border:1px solid var(--line2)}
+
+.sh{font-weight:600;font-size:14px;margin:0 0 2px;display:flex;align-items:center;gap:8px}
+.sh .rl{height:1px;background:var(--line);flex:1}
+.sn{font-size:11px;color:var(--mu);margin:0 0 13px}
+
+.tag{font-family:var(--fm);font-size:10px;background:var(--bg);border:1px solid var(--line2);border-radius:5px;padding:2px 6px;color:var(--mu)}
+.chip2{display:inline-flex;align-items:center;gap:5px;font-family:var(--fm);font-size:10px;
+  background:var(--xlgT);color:#4a6b1c;border:1px solid #c5d891;border-radius:6px;padding:3px 8px}
+
+.dfwrap{position:relative;display:inline-block}
+.dfbtn{display:inline-flex;align-items:center;gap:5px;font-family:var(--fs);font-weight:600;font-size:12px;
+  padding:7px 11px;border-radius:8px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink2);white-space:nowrap;transition:.12s}
+.dfbtn:hover,.dfbtn.on{border-color:var(--brand);color:var(--brand)}
+.dfbtn.on{background:var(--brandT)}
+.dfbtn svg{width:13px;height:13px}
+.dfpanel{position:absolute;top:calc(100% + 5px);left:0;z-index:50;background:#fff;border:1px solid var(--line);
+  border-radius:11px;box-shadow:0 8px 28px rgba(11,27,43,.14);min-width:230px;max-height:340px;display:none;flex-direction:column}
+.dfpanel.open{display:flex}
+.dfhead{padding:9px 11px 7px;border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:6px}
+.dfhead span{font-weight:600;font-size:12px;flex:1}
+.dfsearch{font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-family:var(--fs);outline:none;margin:6px 11px;width:calc(100% - 22px)}
+.dfsearch:focus{border-color:var(--brand)}
+.dflist{overflow-y:auto;flex:1;padding:4px 0}
+.dfitem{display:flex;align-items:center;gap:7px;padding:5px 11px;cursor:pointer;font-size:12px;transition:.1s}
+.dfitem:hover{background:var(--brandT)}
+.dfitem input{width:13px;height:13px;accent-color:var(--brand);cursor:pointer;flex:none}
+.dfitem label{cursor:pointer;flex:1}
+.dffoot{padding:7px 11px;border-top:1px solid var(--line2);display:flex;gap:5px}
+
+table.dbt{border-collapse:collapse;width:100%;font-size:11.5px}
+table.dbt thead th{background:#f5f8fb;padding:7px 10px;font-weight:600;font-size:10.5px;
+  color:var(--ink2);text-align:left;border-bottom:1.5px solid var(--line);white-space:nowrap;position:sticky;top:0;z-index:2}
+table.dbt thead th.r{text-align:right}
+table.dbt tbody td{padding:6px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+table.dbt tbody td.r{text-align:right;font-family:var(--fm);font-size:11px;font-variant-numeric:tabular-nums}
+table.dbt tbody tr:hover{background:#f5f9fc}
+table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:var(--fs);color:var(--ink);background:#fff}
+
+.toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(14px);opacity:0;pointer-events:none;
+  background:var(--ink);color:#fff;padding:9px 15px;border-radius:9px;font-size:12px;font-weight:500;
+  box-shadow:0 8px 24px rgba(11,27,43,.25);transition:.2s;z-index:200;display:flex;align-items:center;gap:7px;border-left:3px solid var(--ok)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{border-left-color:var(--err)}
+
+.empty{text-align:center;padding:52px 20px;color:var(--mu)}
+.empty svg{width:38px;height:38px;color:var(--mu2);margin:0 auto 10px;display:block}
+.empty h3{color:var(--ink2);margin:0 0 4px}
+.empty p{font-size:12px}
+
+.deptcard{margin-top:16px}
+.emp{border:1px solid var(--line2);border-radius:10px;margin-bottom:10px;background:#fff;overflow:hidden}
+.emp-h{display:flex;align-items:center;gap:9px;padding:9px 13px;background:#f8fafc;border-bottom:1px solid var(--line2);flex-wrap:wrap}
+.emp-h b{font-size:12.5px}
+.emp-h .em{font-family:var(--fm);font-size:10.5px;color:var(--mu)}
+.emp table{border-collapse:collapse;width:100%;font-size:11.5px}
+.emp td{padding:5px 13px;border-bottom:1px solid var(--line2)}
+.emp td.r{text-align:right;font-family:var(--fm);font-size:11px}
+.emp tr:last-child td{border-bottom:0}
+
+.notice{display:flex;gap:9px;align-items:flex-start;background:var(--warnT);border:1px solid #f2ddac;border-radius:10px;
+  padding:10px 13px;font-size:12px;color:#7a5200;margin-bottom:14px}
+.notice.blue{background:var(--brandT);border-color:#c8dcee;color:var(--brand2)}
+
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#ccd6de;border-radius:3px}
+.foot{margin-top:26px;text-align:center;font-size:10.5px;color:var(--mu2);font-family:var(--fm)}
+.btn.hd{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.25);color:#fff;font-size:11px}
+.btn.hd:hover{background:rgba(255,255,255,.16);border-color:var(--amber);color:var(--amber)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mast">
+    <div class="logo">K-MILE<small>AIR</small></div>
+    <div class="mast-t">
+      <div class="ey">Compliance Monitoring</div>
+      <h1>Document Acknowledgement Monitor</h1>
+      <div class="sub">ติดตามสถานะ Overdue Acknowledgement รายแผนก · K-Mile Air Co., Ltd.</div>
+    </div>
+    <div class="mast-r">
+      <div class="live-badge"><span class="dot off" id="liveDot"></span><span id="liveTxt">No data</span></div>
+      <div style="margin-top:5px">Snapshot: <b id="metaSnap">—</b> · Doc Base as of: <b id="metaAsOf">—</b></div>
+      <div>Users: <b id="metaUsers">—</b> · Doc Base: <b id="metaDocs">—</b></div>
+      <div style="margin-top:7px"><button class="btn hd" id="btnShareHtml" title="บันทึกไฟล์ HTML ที่ฝังข้อมูลปัจจุบันไว้ในตัว ส่งให้คนอื่นเปิดดูได้ทันที">⬇ Save HTML พร้อมข้อมูล (สำหรับแชร์)</button></div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button class="on" data-tab="dash">Dashboard</button>
+  <button data-tab="detail">Department Detail</button>
+  <button data-tab="docbase">Document Base <span class="nbadge" id="newBadge" style="display:none">!</span></button>
+  <button data-tab="import">Import</button>
+</nav>
+
+<div class="wrap">
+
+<div class="notice" id="storeWarn" style="display:none;margin-top:16px">
+  ⚠ <span><b>เบราว์เซอร์นี้บล็อกการบันทึกข้อมูล (localStorage)</b> — ข้อมูลที่ import จะอยู่เฉพาะ session นี้ (รีเฟรชแล้วหาย) ใช้ปุ่ม "Save HTML พร้อมข้อมูล" เพื่อเก็บผลไว้เป็นไฟล์</span>
+</div>
+<div class="notice blue" id="embedInfo" style="display:none;margin-top:16px">
+  📄 <span><b>ไฟล์นี้มีข้อมูลฝังมาในตัว</b> (บันทึกเมื่อ <b id="embedWhen">—</b>) — เปิดดูได้เลยไม่ต้อง import · ถ้า import ไฟล์ใหม่ ข้อมูลจะอัปเดตเฉพาะบนเครื่องนี้ แล้วกด "Save HTML พร้อมข้อมูล" เพื่อสร้างไฟล์แชร์รอบใหม่</span>
+</div>
+
+<!-- ═══ 01 DASHBOARD ═══ -->
+<section class="panel on" id="tab-dash">
+  <div id="dashEmpty" class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-4"/></svg>
+    <h3>ยังไม่มีข้อมูล</h3>
+    <p>ไปที่แท็บ <b>Import</b> แล้วอัปโหลดไฟล์ User-Performance / Document Base / Users</p>
+    <button class="btn p" style="margin-top:10px" onclick="go('import')">ไปที่ Import →</button>
+  </div>
+  <div id="dashMain" style="display:none">
+    <div class="g4" id="kpiRow" style="margin-bottom:16px"></div>
+    <div class="row" style="margin-bottom:11px">
+      <label style="font-size:11px;color:var(--mu);font-weight:500" for="metricSel">Metric</label>
+      <select class="sel" id="metricSel">
+        <option value="over">Overdue documents</option>
+        <option value="intime">In-Time pending</option>
+        <option value="pending">All pending (unread)</option>
+        <option value="overUsers">Users with overdue</option>
+      </select>
+      <div class="seg" id="modeSeg"><button class="on" data-m="summary">Summary</button><button data-m="rows">Detail rows</button></div>
+      <div class="dfwrap" id="dfWrap">
+        <button class="dfbtn" id="dfBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+          <span id="dfLabel">All Departments</span>
+        </button>
+        <div class="dfpanel" id="dfPanel">
+          <div class="dfhead"><span>Filter Departments</span>
+            <button class="btn g" style="font-size:10.5px;padding:2px 7px" id="dfAll">All</button>
+            <button class="btn g" style="font-size:10.5px;padding:2px 7px" id="dfNone">None</button>
+          </div>
+          <input class="dfsearch" id="dfSearch" placeholder="Search…">
+          <div class="dflist" id="dfList"></div>
+          <div class="dffoot">
+            <button class="btn p" style="flex:1;justify-content:center;font-size:11.5px" id="dfApply">Apply</button>
+            <button class="btn g" style="font-size:11.5px" id="dfClose">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="sp"></div>
+      <span class="tag" id="dashTag"></span>
+      <button class="btn" id="btnExChart">Chart PNG</button>
+      <button class="btn p" id="btnExBoard">Dashboard PNG</button>
+    </div>
+
+    <div id="dashSummary">
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><h3 id="chartTitle">Overdue documents by Department</h3><div class="sp"></div><span class="chip2">K-Mile Air · <b id="chartMetricLabel">Overdue</b></span></div>
+          <div class="cb"><div class="chart-wrap"><canvas id="deptChart"></canvas><div class="tip" id="chartTip"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><h3>Summary</h3><div class="sp"></div><span class="tag" id="pvtTag"></span></div>
+          <div class="cb" style="padding:9px 13px 13px">
+            <div class="pvt-wrap">
+              <table class="pvt">
+                <thead><tr><th>Department</th><th class="r" id="pvtHead">Count</th></tr></thead>
+                <tbody id="pvtBody"></tbody>
+                <tfoot><tr><td>Grand Total</td><td class="r" id="pvtTotal">0</td></tr></tfoot>
+              </table>
+            </div>
+            <p style="font-size:10.5px;color:var(--mu2);margin-top:8px">คลิกแผนกเพื่อดูรายละเอียด · สถานะคำนวณจากวันที่ปัจจุบันเทียบ Due Date</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashRows" style="display:none">
+      <div class="row" style="margin-bottom:9px">
+        <input class="inp srch" id="rowSearch" placeholder="Search name / email / document…">
+        <select class="sel" id="rowStatus">
+          <option value="">All status</option>
+          <option value="Over due">Over due</option>
+          <option value="In-Time">In-Time</option>
+          <option value="Unknown">Unknown (not in Doc Base)</option>
+        </select>
+        <div class="sp"></div><span class="tag" id="rowTag"></span>
+      </div>
+      <div class="tbl-wrap" style="max-height:560px">
+        <table class="dt"><thead><tr>
+          <th>Employee</th><th>Email</th><th>Department</th><th style="min-width:240px">Document</th>
+          <th class="r">Due Date</th><th class="r">Days over</th><th>Status</th>
+        </tr></thead><tbody id="rowBody"></tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 02 DEPARTMENT DETAIL ═══ -->
+<section class="panel" id="tab-detail">
+  <div class="sh">Department Detail <span class="rl"></span></div>
+  <p class="sn">คลิกแถวแผนกเพื่อดูรายชื่อพนักงาน เอกสารค้าง วันครบกำหนด และจำนวนวันที่เกิน · ปุ่ม PDF download รายงานรายแผนก</p>
+  <div id="detEmpty" class="empty"><h3>ยังไม่มีข้อมูล</h3><p>Import ไฟล์ก่อน</p></div>
+  <div id="detMain" style="display:none">
+    <div class="row" style="margin-bottom:11px">
+      <input class="inp srch" id="detSearch" placeholder="Search department…">
+      <div class="sp"></div>
+      <button class="btn" id="btnExCsv">Export CSV</button>
+    </div>
+    <div class="tbl-wrap"><table class="dt" id="detTable"><thead></thead><tbody></tbody></table></div>
+    <div class="deptcard" id="deptDrill" style="display:none">
+      <div class="card">
+        <div class="ch"><h3 id="drillTitle">—</h3><div class="sp"></div>
+          <span class="tag" id="drillTag"></span>
+          <button class="btn p" id="btnDrillPdf">Export PDF report</button>
+          <button class="btn g" onclick="closeDrill()">✕ Close</button>
+        </div>
+        <div class="cb" id="drillBody"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 03 DOCUMENT BASE ═══ -->
+<section class="panel" id="tab-docbase">
+  <div class="sh">Document Base <span class="rl"></span></div>
+  <p class="sn">ทะเบียนเอกสารหลัก สะสมข้ามการ import (ไม่ลบของเก่า) · Due Date = Published Date + Acknowledge period · สถานะคำนวณใหม่จากวันที่ปัจจุบัน · Export เป็น Excel เพื่อใช้เป็น base data รอบถัดไป</p>
+
+  <div id="newDocSection" style="display:none;margin-bottom:18px">
+    <div class="card">
+      <div class="ch">
+        <h3 style="color:var(--warn)">⚠ เอกสารใหม่จาก User Performance (ยังไม่มีใน Document Base)</h3>
+        <div class="sp"></div>
+        <span class="tag" id="newDocTag"></span>
+        <label class="btn" style="cursor:pointer;font-size:11.5px">
+          Upload PDF (auto-fill date)
+          <input type="file" id="pdfInput" accept=".pdf" multiple hidden>
+        </label>
+        <button class="btn ok" id="btnAddNew">✓ Add checked to Document Base</button>
+      </div>
+      <div class="cb" style="padding:10px 13px 13px">
+        <p style="font-size:11.5px;color:var(--mu);margin-bottom:9px">เอกสารเหล่านี้พบใน Unread Manuals แต่จับคู่กับ Document Base ไม่ได้ — เลือกประเภท FSDS กรอก Published Date แล้วกด Add (ระหว่างที่ยังไม่เพิ่ม เอกสารจะนับเป็นสถานะ Unknown ไม่รวมในยอด Overdue) · หมายเหตุ: ชื่อเอกสารที่มี comma อาจถูกตัดเป็นหลายรายการ — ถ้าเห็นชิ้นส่วนชื่อ (เช่น "20L.") ให้เพิ่มชื่อเต็มด้วยมือในช่องด้านล่างแทน แล้วระบบจะต่อชื่อกลับให้อัตโนมัติในรอบถัดไป</p>
+        <div class="tbl-wrap" style="max-height:280px">
+          <table class="dbt">
+            <thead><tr>
+              <th><input type="checkbox" id="chkNewAll" onchange="toggleNewAll(this.checked)"></th>
+              <th style="min-width:260px">Document Name</th>
+              <th class="r">Users</th>
+              <th>FSDS Type</th><th class="r">Ack Period</th><th>Published Date</th><th>Due Date</th>
+            </tr></thead>
+            <tbody id="newDocBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="ch"><h3>เพิ่มเอกสารด้วยมือ</h3></div>
+    <div class="cb">
+      <div class="row" style="gap:8px;flex-wrap:wrap">
+        <input class="inp" id="manName" placeholder="Document name…" style="flex:2;min-width:200px">
+        <select class="sel" id="manType" onchange="onManType()">
+          <option value="FSDS1">FSDS1 (3 days)</option>
+          <option value="FSDS2">FSDS2 (7 days)</option>
+          <option value="FSDS3">FSDS3 (7 days)</option>
+          <option value="FSDS4" selected>FSDS4 (30 days)</option>
+          <option value="FSDS5">FSDS5 (30 days)</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input class="inp" id="manAck" type="number" value="30" min="1" style="width:80px" placeholder="Days">
+        <input class="inp" id="manPub" type="date">
+        <button class="btn ok" id="btnManAdd">+ Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:10px">
+    <input class="inp srch" id="dbSearch" placeholder="Search document…">
+    <select class="sel" id="dbStatusFilter">
+      <option value="">All status</option>
+      <option value="Over due">Over due</option>
+      <option value="In-Time">In-Time</option>
+    </select>
+    <div class="sp"></div>
+    <span class="tag" id="dbCount"></span>
+    <button class="btn" id="btnExDbXlsx">Export Document Base (Excel)</button>
+  </div>
+  <div class="tbl-wrap" style="max-height:520px">
+    <table class="dbt">
+      <thead><tr>
+        <th data-k="name" style="min-width:280px">Document Name ▾</th>
+        <th data-k="ack" class="r">Ack (days)</th>
+        <th data-k="pub" class="r">Published Date</th>
+        <th data-k="due" class="r">Due Date</th>
+        <th data-k="status" class="r">Status (today)</th>
+      </tr></thead>
+      <tbody id="dbBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ 04 IMPORT ═══ -->
+<section class="panel" id="tab-import">
+  <div class="sh">Import Data <span class="rl"></span></div>
+  <p class="sn">อัปโหลดไฟล์ Excel ที่ export จากระบบ · ไม่จำเป็นต้องครบ 3 ไฟล์ทุกครั้ง — ไฟล์ที่ไม่ได้อัปโหลดจะใช้ข้อมูลเดิมที่เคย import ไว้</p>
+
+  <div class="notice blue">
+    💾 <span><b>ข้อมูลถูกเก็บในเบราว์เซอร์ของเครื่องนี้</b> (localStorage) — เปิดหน้านี้ครั้งถัดไปข้อมูลยังอยู่ · ต้องการส่งให้คนอื่นดู ให้กดปุ่ม <b>"Save HTML พร้อมข้อมูล"</b> มุมขวาบน จะได้ไฟล์ HTML ไฟล์เดียวที่ฝังข้อมูลไว้ในตัว ผู้รับเปิดดูได้ทันทีไม่ต้อง import · Document Base ถูก merge สะสม ไม่ลบของเก่า</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px" id="dropGrid">
+    <div>
+      <div class="drop" id="drop1"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <h3>User-Performance.xlsx</h3>
+        <p>Username · Unread Manuals · Available Updates</p>
+        <button class="btn p" style="margin-top:9px" type="button">Choose file</button>
+        <input type="file" id="fi1" accept=".xlsx,.xls,.csv" hidden>
+      </div>
+      <div id="st1" class="callout ok" style="margin-top:7px;display:none"></div>
+    </div>
+    <div>
+      <div class="drop" id="drop2"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <h3>Document_Base_data.xlsx</h3>
+        <p>Row Labels · Published Date · Ack Period · Due Date</p>
+        <button class="btn p" style="margin-top:9px" type="button">Choose file</button>
+        <input type="file" id="fi2" accept=".xlsx,.xls" hidden>
+      </div>
+      <div id="st2" class="callout ok" style="margin-top:7px;display:none"></div>
+    </div>
+    <div>
+      <div class="drop" id="drop3"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <h3>users.xlsx</h3>
+        <p>User Name · Description (department)</p>
+        <button class="btn p" style="margin-top:9px" type="button">Choose file</button>
+        <input type="file" id="fi3" accept=".xlsx,.xls,.csv" hidden>
+      </div>
+      <div id="st3" class="callout ok" style="margin-top:7px;display:none"></div>
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:14px">
+    <label style="font-size:11px;color:var(--mu);font-weight:500" for="snapDate">Snapshot date</label>
+    <input type="date" class="inp" id="snapDate">
+    <div class="sp"></div>
+    <button class="btn g" id="btnClearImport">Clear</button>
+    <button class="btn p" id="btnPublish" disabled>Process &amp; Publish →</button>
+  </div>
+
+  <div id="importPreview" style="display:none;margin-bottom:14px">
+    <div class="card"><div class="ch"><h3>Preview ก่อน Publish</h3><div class="sp"></div><span class="tag" id="prevNote"></span></div>
+      <div class="cb"><div class="g4" id="prevKpis" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))"></div></div></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="logicGrid">
+    <div class="callout ok"><b>Logic การประมวลผล</b><br>
+      ① parse <code>Unread Manuals</code> ต่อ user เป็นรายชื่อเอกสารค้างจริง<br>
+      ② lookup Document Base (trim + case-insensitive) → Published + Ack period → Due Date<br>
+      ③ คำนวณสถานะ Over due / In-Time ใหม่จาก<b>วันที่ปัจจุบัน</b> (ไม่ใช้ค่า Invalid period ที่ติดมากับไฟล์)<br>
+      ④ join แผนกจาก users.xlsx (คอลัมน์ Description) → รวมยอดรายแผนก · CD+QD รวมเป็น CD/QD · ซ่อน Unassigned<br>
+      ⑤ เอกสารที่จับคู่ไม่ได้ → แจ้งเป็น "เอกสารใหม่" ใน Document Base tab (นับเป็น Unknown)
+    </div>
+    <div class="callout w"><b>FSDS Acknowledge Period</b><br>
+      FSDS1 = 3 days · FSDS2 = 7 days · FSDS3 = 7 days<br>
+      FSDS4 = 30 days · FSDS5 = 30 days<br><br>
+      <b>หมายเหตุ:</b> ตัวเลข dashboard นับจากเอกสาร <b>Over due</b> ที่ join ได้จริง ไม่ใช่ Available Updates ดิบ
+    </div>
+  </div>
+
+  <div style="margin-top:12px" class="callout" id="storedInfo">—</div>
+</section>
+
+<div class="foot">K-Mile Air · Compliance Monitoring · internal tool · Unassigned excluded from all views</div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script id="kmileData" type="application/json">null</script>
+<script>
+/* ══════════ SEED MAP (User Name → Description) ══════════ */
+const SEED_MAP={}; /* department map is populated by importing users.xlsx (employee emails stripped from the public-hosted copy) */
+
+/* ══════════ STATE ══════════ */
+const SK={up:'kmile_ack_up',map:'kmile_ack_map',db:'kmile_ack_db',meta:'kmile_ack_meta'};
+let UP=[];                    // [{u,first,last,updates,reminders,unread:[]}]
+let userMap={...SEED_MAP};    // email → Description
+let docBase={};               // nrm(name) → {name,ack,pub,due,fsds}
+let META={snapshot:'',asOf:''};
+let C=null;                   // computed: {users,newDocs}
+let raw={up:null,doc:null,docAsOf:'',users:null};
+let metric='over';
+let dashMode='summary';
+let selDepts=null,dfTmp=null,dfQ='';
+let detSort={k:'over',d:-1},dbSort={k:'name',d:1};
+let drillDept=null;
+let newDocState=[];
+const MLBL={over:'Overdue documents',intime:'In-Time pending',pending:'All pending documents',overUsers:'Users with overdue'};
+const FSDS={FSDS1:3,FSDS2:7,FSDS3:7,FSDS4:30,FSDS5:30};
+const memStore={};
+
+/* ══════════ HELPERS ══════════ */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+const nrm=v=>(v??'').toString().trim().toLowerCase().replace(/\s+/g,' ');
+function isoLocal(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const todayISO=()=>isoLocal(new Date());
+function addDays(iso,n){if(!iso)return'';const d=new Date(iso+'T00:00:00');if(isNaN(d))return'';d.setDate(d.getDate()+Number(n||0));return isoLocal(d);}
+function dayDiff(iso){const a=new Date(todayISO()+'T00:00:00'),b=new Date(iso+'T00:00:00');return Math.round((a-b)/86400000);}
+function serialToISO(n){const d=new Date(Math.round((n-25569)*86400000));return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
+function isoToSerial(iso){const[y,m,d]=iso.split('-').map(Number);return Math.round(Date.UTC(y,m-1,d)/86400000)+25569;}
+function fmtAny(v){
+  if(v==null||v==='')return'';
+  if(typeof v==='number')return v>59&&v<80000?serialToISO(v):'';
+  const s=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+  const d=new Date(s);return isNaN(d)?'':isoLocal(d);
+}
+function toast(m,err=false){const t=$('#toast');t.textContent=m;t.className='toast show'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.className='toast',3000);}
+function groupOf(d){
+  if(!d)return'Unassigned';const u=d.trim().toUpperCase();
+  if(u.startsWith('ED'))return'ED';if(u.startsWith('FD'))return'FD';if(u.startsWith('AD'))return'AD';
+  if(u.startsWith('SSD'))return'SSD';if(u.startsWith('HD'))return'HD';if(u.startsWith('GD'))return'GD';
+  if(u.startsWith('TD'))return'TD';if(u.startsWith('MD'))return'MD';
+  if(u.startsWith('CD')||u.startsWith('QD'))return'CD/QD';
+  if(u.startsWith('MNT')||u.includes('MNT '))return'MNT';if(u.startsWith('ATO'))return'ATO';
+  if(u.startsWith('COMMERCIAL'))return'Commercial';
+  if(u.includes('CTO')||u.includes('GHA')||u.includes('REPRESENT'))return'Stations & GHA';
+  if(u.includes('SECURITY')||u.includes(' QA')||u.includes('CLC'))return'Providers';
+  return d.trim();
+}
+function fsdsAck(t){return FSDS[t]||7}
+function guessType(name){
+  const n=nrm(name);
+  if(n.includes('safety')||n.includes('security')||n.includes('ioc'))return'FSDS1';
+  if(n.includes('bulletin')||n.includes('aip'))return'FSDS2';
+  if(n.includes('form')||n.includes('procedure')||n.includes('checklist'))return'FSDS3';
+  return'FSDS4';
+}
+function effDue(d){return d.pub?addDays(d.pub,d.ack||7):(d.due||'');}
+function statusOf(due){return due?(todayISO()>=due?'Over due':'In-Time'):'Over due';}
+function downloadBlob(blob,filename){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;a.style.display='none';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+
+/* ══════════ STORAGE (localStorage, in-memory fallback) ══════════ */
+const storageOK=(()=>{try{const t='__kmile_t';localStorage.setItem(t,'1');localStorage.removeItem(t);return true;}catch(e){return false;}})();
+function stGet(k){
+  if(storageOK){try{return localStorage.getItem(k);}catch(e){}}
+  return memStore[k]??null;
+}
+function stSet(k,v){
+  if(storageOK){try{localStorage.setItem(k,v);return;}catch(e){}}
+  memStore[k]=v;
+}
+async function saveAll(){
+  try{
+    META.savedAt=new Date().toISOString();
+    stSet(SK.up,JSON.stringify(UP));
+    stSet(SK.map,JSON.stringify(userMap));
+    stSet(SK.db,JSON.stringify(docBase));
+    stSet(SK.meta,JSON.stringify(META));
+  }catch(e){toast('บันทึกลง storage ไม่สำเร็จ: '+e.message,true);}
+}
+async function saveDB(){try{META.savedAt=new Date().toISOString();stSet(SK.db,JSON.stringify(docBase));stSet(SK.meta,JSON.stringify(META));}catch(e){toast('บันทึกไม่สำเร็จ',true);}}
+function loadAll(){
+  try{const v=stGet(SK.up);if(v)UP=JSON.parse(v);}catch(e){}
+  try{const v=stGet(SK.map);if(v)userMap={...SEED_MAP,...JSON.parse(v)};}catch(e){}
+  try{const v=stGet(SK.db);if(v)docBase=JSON.parse(v);}catch(e){}
+  try{const v=stGet(SK.meta);if(v)META=JSON.parse(v);}catch(e){}
+}
+/* Embedded snapshot: a shared copy of this file carries the dataset inside
+   <script id="kmileData">. It wins over localStorage only when it is newer. */
+function readEmbedded(){
+  try{
+    const el=document.getElementById('kmileData');if(!el)return null;
+    const d=JSON.parse(el.textContent);
+    return d&&Array.isArray(d.UP)&&d.UP.length?d:null;
+  }catch(e){return null;}
+}
+async function exportShareHtml(){
+  if(!hasData()){toast('ยังไม่มีข้อมูลให้ฝังในไฟล์ — import ก่อน',true);return;}
+  let src=null;
+  try{const r=await fetch(location.href);if(r.ok)src=await r.text();}catch(e){}
+  if(!src||!src.includes('id="kmileData"')){
+    // file:// fallback: serialize the DOM, stripping rendered tables (re-rendered on boot)
+    ['dbBody','rowBody','drillBody','newDocBody','pvtBody','kpiRow','dfList'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='';});
+    const dt=document.querySelector('#detTable tbody');if(dt)dt.innerHTML='';
+    src='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+    renderAll();
+  }
+  const payload=JSON.stringify({UP,userMap,docBase,META,savedAt:new Date().toISOString()}).replace(/<\//g,'<\\/');
+  const out=src.replace(/(<script id="kmileData"[^>]*>)[\s\S]*?(<\/script>)/,(m,a,b)=>a+payload+b);
+  if(!/id="kmileData"[^>]*>\{/.test(out)){toast('สร้างไฟล์แชร์ไม่สำเร็จ (หา data slot ไม่เจอ)',true);return;}
+  downloadBlob(new Blob([out],{type:'text/html;charset=utf-8'}),`KMile_Ack_Monitor_${META.snapshot||todayISO()}.html`);
+  toast('บันทึกไฟล์พร้อมข้อมูลแล้ว ✓ ส่งไฟล์นี้ให้คนอื่นเปิดดูได้เลย');
+}
+
+/* ══════════ ZIP READER + XLSX PARSER (no external libs) ══════════ */
+async function unzip(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf);
+  let e=-1;
+  for(let i=u8.length-22;i>=Math.max(0,u8.length-22-65536);i--){
+    if(dv.getUint32(i,true)===0x06054b50){e=i;break;}
+  }
+  if(e<0)throw new Error('ไฟล์ไม่ใช่ .xlsx ที่ถูกต้อง');
+  const count=dv.getUint16(e+10,true),cdOff=dv.getUint32(e+16,true);
+  const out=new Map();let p=cdOff;
+  const dec=new TextDecoder();
+  for(let i=0;i<count;i++){
+    if(dv.getUint32(p,true)!==0x02014b50)break;
+    const method=dv.getUint16(p+10,true);
+    const csize=dv.getUint32(p+20,true);
+    const nlen=dv.getUint16(p+28,true),elen=dv.getUint16(p+30,true),clen=dv.getUint16(p+32,true);
+    const lho=dv.getUint32(p+42,true);
+    const name=dec.decode(u8.subarray(p+46,p+46+nlen));
+    const lnlen=dv.getUint16(lho+26,true),lelen=dv.getUint16(lho+28,true);
+    const start=lho+30+lnlen+lelen;
+    const data=u8.subarray(start,start+csize);
+    if(method===0)out.set(name,data);
+    else if(method===8){
+      const ab=await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+      out.set(name,new Uint8Array(ab));
+    }else throw new Error('รูปแบบบีบอัดใน zip ไม่รองรับ');
+    p+=46+nlen+elen+clen;
+  }
+  return out;
+}
+function colToIdx(a){let n=0;for(const ch of a)n=n*26+(ch.charCodeAt(0)-64);return n-1;}
+function sheetToAoa(doc,sst,dateStyles){
+  const rows=[];
+  for(const row of doc.getElementsByTagNameNS('*','row')){
+    const ri=(+row.getAttribute('r')||rows.length+1)-1;
+    const arr=rows[ri]||(rows[ri]=[]);
+    let ci=-1;
+    for(const c of row.getElementsByTagNameNS('*','c')){
+      const ref=c.getAttribute('r');
+      ci=ref?colToIdx(ref.replace(/\d+/g,'')):ci+1;
+      const t=c.getAttribute('t')||'n';const s=+(c.getAttribute('s')||0);
+      let v=null;
+      if(t==='inlineStr'){v=c.textContent;}
+      else{
+        const vn=c.getElementsByTagNameNS('*','v')[0];if(!vn)continue;
+        const rawV=vn.textContent;
+        if(t==='s')v=sst[+rawV]??'';
+        else if(t==='str')v=rawV;
+        else if(t==='b')v=rawV==='1';
+        else{const num=+rawV;v=dateStyles.has(s)?serialToISO(num):num;}
+      }
+      arr[ci]=v;
+    }
+  }
+  for(let i=0;i<rows.length;i++)if(!rows[i])rows[i]=[];
+  return rows;
+}
+function parseCSV(txt){
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(q){if(ch==='"'){if(txt[i+1]==='"'){cell+='"';i++;}else q=false;}else cell+=ch;}
+    else if(ch==='"')q=true;
+    else if(ch===','){row.push(cell);cell='';}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&txt[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell='';}
+    else cell+=ch;
+  }
+  if(cell!==''||row.length){row.push(cell);rows.push(row);}
+  return rows;
+}
+async function readWorkbook(file){
+  if(/\.csv$/i.test(file.name)){
+    const txt=await file.text();
+    return{names:['csv'],grids:{csv:parseCSV(txt)}};
+  }
+  const files=await unzip(await file.arrayBuffer());
+  const dec=new TextDecoder();
+  const getXml=p=>{const u=files.get(p);return u?new DOMParser().parseFromString(dec.decode(u),'application/xml'):null;};
+  const sst=[];
+  const ss=getXml('xl/sharedStrings.xml');
+  if(ss)for(const si of ss.getElementsByTagNameNS('*','si')){let t='';for(const tn of si.getElementsByTagNameNS('*','t'))t+=tn.textContent;sst.push(t);}
+  const dateStyles=new Set();
+  const st=getXml('xl/styles.xml');
+  if(st){
+    const custom={};
+    for(const nf of st.getElementsByTagNameNS('*','numFmt'))custom[nf.getAttribute('numFmtId')]=nf.getAttribute('formatCode')||'';
+    const isDate=id=>{
+      const n=+id;
+      if((n>=14&&n<=22)||(n>=45&&n<=47))return true;
+      const c=(custom[id]||'').replace(/\[[^\]]*\]/g,'').replace(/"[^"]*"/g,'');
+      return /[dmy]/i.test(c)&&!/[#0]/.test(c);
+    };
+    const xfs=st.getElementsByTagNameNS('*','cellXfs')[0];
+    if(xfs){let i=0;for(const xf of xfs.getElementsByTagNameNS('*','xf')){if(isDate(xf.getAttribute('numFmtId')||'0'))dateStyles.add(i);i++;}}
+  }
+  const wbx=getXml('xl/workbook.xml');
+  if(!wbx)throw new Error('อ่าน workbook ไม่ได้');
+  const relx=getXml('xl/_rels/workbook.xml.rels');
+  const relMap={};
+  if(relx)for(const r of relx.getElementsByTagNameNS('*','Relationship'))relMap[r.getAttribute('Id')]=r.getAttribute('Target');
+  const names=[],grids={};let idx=0;
+  for(const sh of wbx.getElementsByTagNameNS('*','sheet')){
+    idx++;
+    const nm=sh.getAttribute('name')||('Sheet'+idx);
+    const rid=sh.getAttribute('r:id')||sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+    let tgt=(rid&&relMap[rid])||('worksheets/sheet'+idx+'.xml');
+    tgt=tgt.replace(/^\//,'');if(!tgt.startsWith('xl/'))tgt='xl/'+tgt;
+    const sx=getXml(tgt);if(!sx)continue;
+    names.push(nm);grids[nm]=sheetToAoa(sx,sst,dateStyles);
+  }
+  return{names,grids};
+}
+
+/* ══════════ FILE-SPECIFIC PARSERS ══════════ */
+function findHdrRow(rows,keys){for(let i=0;i<Math.min(rows.length,12);i++){const low=(rows[i]||[]).map(nrm);if(keys.some(k=>low.includes(k)))return i;}return 0;}
+function colIdx(hdr,names){const low=hdr.map(nrm);for(const n of names){const i=low.indexOf(n);if(i>=0)return i;}for(const n of names){const i=low.findIndex(h=>h&&h.includes(n));if(i>=0)return i;}return -1;}
+
+function parseUP(wb){
+  let grid=null;
+  for(const nm of wb.names){const g=wb.grids[nm];const flat=g.slice(0,12).flat().map(nrm);if(flat.includes('username')||flat.includes('available updates')){grid=g;break;}}
+  if(!grid)grid=wb.grids[wb.names[0]];
+  const hr=findHdrRow(grid,['username','available updates']);
+  const hdr=grid[hr]||[];
+  const cU=colIdx(hdr,['username','user name / email','email']);
+  const cF=colIdx(hdr,['first name','firstname']);
+  const cL=colIdx(hdr,['last name','lastname']);
+  const cUpd=colIdx(hdr,['available updates','available update']);
+  const cRem=colIdx(hdr,['reminders','reminder']);
+  const cMan=colIdx(hdr,['unread manuals','unread manual']);
+  if(cU<0)throw new Error('ไม่พบคอลัมน์ "Username" ในไฟล์ User-Performance');
+  const rows=[];
+  for(let i=hr+1;i<grid.length;i++){
+    const r=grid[i];if(!r)continue;
+    const u=nrm(r[cU]);if(!u)continue;
+    let unread=[];
+    if(cMan>=0&&r[cMan]!=null){
+      let s=String(r[cMan]).trim();
+      if(s.startsWith('['))s=s.slice(1,-1);
+      unread=s.split(/,(?![^[\]]*\])/).map(x=>x.trim().replace(/^['"]|['"]$/g,'')).filter(Boolean);
+    }
+    rows.push({u,first:cF>=0?String(r[cF]||''):'',last:cL>=0?String(r[cL]||''):'',
+      updates:cUpd>=0?(Number(r[cUpd])||0):0,reminders:cRem>=0?(Number(r[cRem])||0):0,unread});
+  }
+  return rows;
+}
+function parseDocBase(wb){
+  const nm=wb.names.find(n=>nrm(n).includes('over due'))||wb.names[0];
+  const grid=wb.grids[nm];
+  const hr=findHdrRow(grid,['row labels','published date','acknowledge period']);
+  const hdr=grid[hr]||[];
+  const cN=colIdx(hdr,['row labels','document','name']);
+  const cP=colIdx(hdr,['published date','published']);
+  const cA=colIdx(hdr,['acknowledge period','ack period']);
+  const cD=colIdx(hdr,['due date','due']);
+  const cT=colIdx(hdr,['date of today','today']);
+  if(cN<0)throw new Error('ไม่พบคอลัมน์ "Row Labels" ในไฟล์ Document Base');
+  const docs={};let asOf='';
+  for(let i=hr+1;i<grid.length;i++){
+    const r=grid[i];if(!r)continue;
+    if(cT>=0&&!asOf&&r[cT]!=null)asOf=fmtAny(r[cT]);
+    const name=String(r[cN]||'').trim();
+    if(!name||nrm(name)==='grand total')continue;
+    const pub=fmtAny(r[cP]);
+    const ack=Number(r[cA])||7;
+    const due=fmtAny(r[cD])||addDays(pub,ack);
+    docs[nrm(name)]={name,ack,pub,due};
+  }
+  return{docs,asOf};
+}
+function parseUsers(wb){
+  let grid=null;
+  for(const nm of wb.names){const g=wb.grids[nm];const flat=g.slice(0,5).flat().map(nrm);if(flat.includes('user name')||flat.includes('description')){grid=g;break;}}
+  if(!grid)grid=wb.grids[wb.names[0]];
+  const hr=findHdrRow(grid,['user name','description','email']);
+  const hdr=grid[hr]||[];
+  const cU=colIdx(hdr,['user name','username','email']);
+  const cD=colIdx(hdr,['description','department','dept']);
+  if(cU<0||cD<0)throw new Error('ไม่พบคอลัมน์ "User Name" หรือ "Description" ในไฟล์ users');
+  const map={};
+  for(let i=hr+1;i<grid.length;i++){
+    const r=grid[i];if(!r)continue;
+    const u=nrm(r[cU]);const d=String(r[cD]||'').trim();
+    if(u&&d)map[u]=d;
+  }
+  return map;
+}
+
+/* ══════════ CORE COMPUTE (join + reconciliation) ══════════ */
+/* dbKey: normalize including comma spacing so "A,B" == "A , B" == "A, B" */
+const dbKey=s=>nrm(s).replace(/\s*,\s*/g,', ');
+/* Unread Manuals is a comma-separated string, but real document names contain
+   commas — so the split produces fragments. Greedily re-join adjacent tokens
+   when the joined string matches a Document Base entry (deterministic, no fuzzy). */
+function rejoinTokens(toks,lookup){
+  const out=[];let i=0;
+  while(i<toks.length){
+    let hit=null,len=1;
+    for(let j=Math.min(toks.length,i+8);j>i;j--){
+      const cand=toks.slice(i,j).join(', ');
+      if(lookup.has(dbKey(cand))){hit=cand;len=j-i;break;}
+    }
+    out.push(hit||toks[i]);i+=len;
+  }
+  return out;
+}
+function computeWith(up,map,db){
+  const lookup=new Map();
+  for(const d of Object.values(db))lookup.set(dbKey(d.name),d);
+  const users=[];const newDocs=new Map();
+  for(const r of up){
+    const desc=map[r.u]||'Unassigned';
+    const dept=groupOf(desc);
+    const docs=[];let over=0,intime=0,unknown=0;
+    for(const nm of rejoinTokens(r.unread,lookup)){
+      const d=lookup.get(dbKey(nm));
+      if(!d){
+        unknown++;docs.push({name:nm,known:false,pub:'',ack:'',due:'',status:'Unknown',daysOver:null});
+        const e=newDocs.get(dbKey(nm))||{name:nm,users:0};e.users++;newDocs.set(dbKey(nm),e);
+        continue;
+      }
+      const due=effDue(d);const st=statusOf(due);
+      if(st==='Over due')over++;else intime++;
+      docs.push({name:d.name,known:true,pub:d.pub,ack:d.ack,due,status:st,daysOver:st==='Over due'&&due?dayDiff(due):null});
+    }
+    users.push({u:r.u,first:r.first||'',last:r.last||'',desc,dept,updates:r.updates,reminders:r.reminders,docs,over,intime,unknown});
+  }
+  return{users,newDocs:[...newDocs.values()].sort((a,b)=>a.name.localeCompare(b.name))};
+}
+function compute(){return computeWith(UP,userMap,docBase);}
+function aggDepts(filter){
+  if(!C)return[];
+  const m={};
+  for(const u of C.users){
+    if(u.dept==='Unassigned')continue;
+    if(filter&&!filter.has(u.dept))continue;
+    const a=m[u.dept]||(m[u.dept]={dept:u.dept,people:0,overUsers:0,over:0,intime:0,unknown:0,pending:0,reminders:0});
+    a.people++;a.over+=u.over;a.intime+=u.intime;a.unknown+=u.unknown;a.pending+=u.docs.length;a.reminders+=u.reminders;
+    if(u.over>0)a.overUsers++;
+  }
+  return Object.values(m);
+}
+function hasData(){return UP.length>0;}
+
+/* ══════════ CHART (canvas, no lib) ══════════ */
+let barRects=[];
+function niceCeil(v){
+  if(v<=0)return 1;
+  const p=Math.pow(10,Math.floor(Math.log10(v)));
+  for(const m of[1,2,5,10]){if(m*p>=v)return m*p;}
+  return 10*p;
+}
+function renderChart(){
+  const cv=$('#deptChart');const wrap=cv.parentElement;
+  const W=wrap.clientWidth||800,H=wrap.clientHeight||400;
+  const dpr=window.devicePixelRatio||1;
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const agg=aggDepts(selDepts).filter(a=>a[metric]>0).sort((a,b)=>b[metric]-a[metric]);
+  const lbl=MLBL[metric];
+  $('#chartTitle').textContent=lbl+' by Department';
+  $('#chartMetricLabel').textContent=lbl;
+  const total=agg.reduce((s,a)=>s+a[metric],0);
+  $('#dashTag').textContent=`${agg.length} departments · total ${fmt(total)}`;
+  barRects=[];
+  if(!agg.length){
+    g.fillStyle='#8496a6';g.font='13px sans-serif';g.textAlign='center';
+    g.fillText('ไม่มีข้อมูลในตัวชี้วัดนี้',W/2,H/2);
+    renderPivot(agg,total,lbl);return;
+  }
+  const padL=46,padR=12,padT=26,rot=agg.length>5;
+  const padB=rot?86:34;
+  const plotW=W-padL-padR,plotH=H-padT-padB;
+  const max=niceCeil(Math.max(...agg.map(a=>a[metric])));
+  const ticks=4;
+  g.font='10px ui-monospace,monospace';g.textAlign='right';g.textBaseline='middle';
+  for(let i=0;i<=ticks;i++){
+    const v=max/ticks*i,y=padT+plotH-plotH*i/ticks;
+    g.strokeStyle=i===0?'#d4dce6':'#eef2f6';g.lineWidth=1;
+    g.beginPath();g.moveTo(padL,y+.5);g.lineTo(W-padR,y+.5);g.stroke();
+    g.fillStyle='#5c6f80';g.fillText(fmt(v),padL-7,y);
+  }
+  const n=agg.length;
+  const slot=plotW/n;
+  const bw=Math.min(50,slot*0.62);
+  agg.forEach((a,i)=>{
+    const v=a[metric];
+    const x=padL+slot*i+(slot-bw)/2;
+    const h=plotH*v/max;
+    const y=padT+plotH-h;
+    g.fillStyle='#4472c4';
+    g.beginPath();
+    const r=Math.min(4,bw/2,h);
+    g.moveTo(x,y+h);g.lineTo(x,y+r);g.arcTo(x,y,x+r,y,r);g.lineTo(x+bw-r,y);g.arcTo(x+bw,y,x+bw,y+r,r);g.lineTo(x+bw,y+h);g.closePath();g.fill();
+    g.fillStyle='#1a3047';g.font='600 10px ui-monospace,monospace';g.textAlign='center';g.textBaseline='bottom';
+    g.fillText(fmt(v),x+bw/2,y-3);
+    g.fillStyle='#5c6f80';g.font='10.5px sans-serif';
+    if(rot){
+      g.save();g.translate(padL+slot*i+slot/2,padT+plotH+8);g.rotate(-Math.PI/4);
+      g.textAlign='right';g.textBaseline='middle';
+      let t=a.dept;if(t.length>16)t=t.slice(0,15)+'…';
+      g.fillText(t,0,0);g.restore();
+    }else{
+      g.textAlign='center';g.textBaseline='top';
+      g.fillText(a.dept,padL+slot*i+slot/2,padT+plotH+7);
+    }
+    barRects.push({x,y,w:bw,h,dept:a.dept,v});
+  });
+  renderPivot(agg,total,lbl);
+}
+function renderPivot(agg,total,lbl){
+  $('#pvtHead').textContent='Count of '+lbl;
+  $('#pvtTag').textContent=agg.length+' rows';
+  $('#pvtBody').innerHTML=agg.map(a=>`<tr onclick="openDrill(${JSON.stringify(a.dept).replace(/"/g,'&quot;')})"><td>${esc(a.dept)}</td><td class="r">${fmt(a[metric])}</td></tr>`).join('')||'<tr><td colspan="2" style="text-align:center;color:var(--mu);padding:14px">—</td></tr>';
+  $('#pvtTotal').textContent=fmt(total);
+}
+function chartHit(ev){
+  const cv=$('#deptChart'),rc=cv.getBoundingClientRect();
+  const x=ev.clientX-rc.left,y=ev.clientY-rc.top;
+  return barRects.find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y-14&&y<=b.y+b.h);
+}
+
+/* ══════════ KPIs ══════════ */
+function renderKPIs(){
+  if(!C)return;
+  const rows=C.users.filter(u=>u.dept!=='Unassigned');
+  const totalOver=rows.reduce((s,u)=>s+u.over,0);
+  const usersOver=rows.filter(u=>u.over>0).length;
+  const agg=aggDepts(null);
+  const deptsOver=agg.filter(a=>a.over>0).length;
+  const newC=C.newDocs.length;
+  $('#kpiRow').innerHTML=[
+    ['Overdue documents (Grand Total)',fmt(totalOver),'นับจาก Unread Manuals ที่เกิน Due Date','e'],
+    ['Users with overdue',fmt(usersOver),'จากทั้งหมด '+fmt(rows.length)+' users','w'],
+    ['Departments with overdue',fmt(deptsOver),'จากทั้งหมด '+fmt(agg.length)+' แผนก','b'],
+    ['New docs (not in Doc Base)',fmt(newC),newC?'ไปเพิ่มข้อมูลในแท็บ Document Base':'Document Base ครบถ้วน',newC?'e':'ok']
+  ].map(([l,v,c,cls])=>`<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c}</div></div>`).join('');
+}
+
+/* ══════════ DASHBOARD DETAIL ROWS ══════════ */
+function renderRows(){
+  if(!C)return;
+  const q=nrm($('#rowSearch').value);const sf=$('#rowStatus').value;
+  let rows=[];
+  for(const u of C.users){
+    if(u.dept==='Unassigned')continue;
+    if(selDepts&&!selDepts.has(u.dept))continue;
+    const nm=(u.first+' '+u.last).trim();
+    for(const d of u.docs){
+      if(sf&&d.status!==sf)continue;
+      if(q&&!(nrm(nm).includes(q)||u.u.includes(q)||nrm(d.name).includes(q)||nrm(u.dept).includes(q)))continue;
+      rows.push({nm,u:u.u,dept:u.dept,doc:d});
+    }
+  }
+  rows.sort((a,b)=>(b.doc.daysOver||0)-(a.doc.daysOver||0));
+  const CAP=600;const over=rows.length>CAP;
+  $('#rowTag').textContent=fmt(rows.length)+' rows'+(over?' (showing first '+CAP+')':'');
+  $('#rowBody').innerHTML=rows.slice(0,CAP).map(r=>`<tr>
+    <td>${esc(r.nm)||'—'}</td>
+    <td style="font-family:var(--fm);font-size:10.5px">${esc(r.u)}</td>
+    <td><span class="chip">${esc(r.dept)}</span></td>
+    <td style="word-break:break-word;max-width:300px;font-size:11.5px">${esc(r.doc.name)}</td>
+    <td class="r">${r.doc.due||'—'}</td>
+    <td class="r">${r.doc.daysOver!=null?fmt(r.doc.daysOver):'—'}</td>
+    <td><span class="pill ${r.doc.status==='Over due'?'e':r.doc.status==='In-Time'?'ok':'n'}">${r.doc.status}</span></td>
+  </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:18px">No match</td></tr>';
+}
+
+/* ══════════ DEPARTMENT DETAIL TAB ══════════ */
+function renderDetail(){
+  const has=hasData();
+  $('#detEmpty').style.display=has?'none':'';
+  $('#detMain').style.display=has?'':'none';
+  if(!has)return;
+  let agg=aggDepts(null);
+  const q=nrm($('#detSearch').value);
+  if(q)agg=agg.filter(a=>nrm(a.dept).includes(q));
+  agg.sort((a,b)=>detSort.d*((a[detSort.k]>b[detSort.k])?1:(a[detSort.k]<b[detSort.k])?-1:0));
+  const maxO=Math.max(1,...agg.map(a=>a.over));
+  const cols=[['dept','Department',0],['people','People',1],['overUsers','Users w/ overdue',1],['over','Overdue docs',1],['intime','In-Time',1],['unknown','Unknown',1],['_pdf','PDF',1]];
+  const tb=$('#detTable');
+  tb.querySelector('thead').innerHTML='<tr>'+cols.map(c=>`<th class="${c[2]?'r':''}" ${c[0]!=='_pdf'?`data-k="${c[0]}"`:''}>${c[1]}${detSort.k===c[0]?(detSort.d<0?' ▾':' ▴'):''}</th>`).join('')+'</tr>';
+  tb.querySelector('tbody').innerHTML=agg.map(a=>`<tr style="cursor:pointer" onclick="openDrill(${JSON.stringify(a.dept).replace(/"/g,'&quot;')})">
+    <td><span class="chip">${esc(a.dept)}</span></td>
+    <td class="r">${fmt(a.people)}</td>
+    <td class="r">${a.overUsers?`<span class="pill ${a.overUsers/a.people>.5?'e':'w'}">${fmt(a.overUsers)}</span>`:'<span class="pill ok">0</span>'}</td>
+    <td class="r"><div class="row" style="justify-content:flex-end;gap:5px;flex-wrap:nowrap"><div class="barm" style="width:65px"><i style="width:${Math.max(2,a.over/maxO*100)}%"></i></div><b style="min-width:32px;text-align:right">${fmt(a.over)}</b></div></td>
+    <td class="r">${fmt(a.intime)}</td>
+    <td class="r">${a.unknown?`<span class="pill n">${fmt(a.unknown)}</span>`:'0'}</td>
+    <td class="r"><button class="btn" style="padding:3px 9px;font-size:11px" onclick="event.stopPropagation();exportDeptPdf(${JSON.stringify(a.dept).replace(/"/g,'&quot;')})">PDF</button></td>
+  </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--mu);padding:18px">No match</td></tr>';
+  tb.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;if(detSort.k===k)detSort.d*=-1;else{detSort.k=k;detSort.d=k==='dept'?1:-1;}renderDetail();});
+  renderDrill();
+}
+function openDrill(dept){drillDept=dept;go('detail');renderDrill();
+  setTimeout(()=>$('#deptDrill').scrollIntoView({behavior:'smooth',block:'start'}),60);}
+function closeDrill(){drillDept=null;renderDrill();}
+function renderDrill(){
+  const box=$('#deptDrill');
+  if(!drillDept||!C){box.style.display='none';return;}
+  const users=C.users.filter(u=>u.dept===drillDept&&u.docs.length>0).sort((a,b)=>b.over-a.over);
+  const clean=C.users.filter(u=>u.dept===drillDept&&u.docs.length===0).length;
+  box.style.display='';
+  $('#drillTitle').textContent='Department: '+drillDept;
+  $('#drillTag').textContent=`${users.length} users with pending · ${clean} up to date`;
+  $('#drillBody').innerHTML=users.map(u=>{
+    const nm=(u.first+' '+u.last).trim()||u.u;
+    return`<div class="emp">
+      <div class="emp-h"><b>${esc(nm)}</b><span class="em">${esc(u.u)}</span><div class="sp"></div>
+        ${u.over?`<span class="pill e">${u.over} overdue</span>`:''}
+        ${u.intime?`<span class="pill ok">${u.intime} in-time</span>`:''}
+        ${u.unknown?`<span class="pill n">${u.unknown} unknown</span>`:''}
+      </div>
+      <table>${u.docs.slice().sort((a,b)=>(b.daysOver||0)-(a.daysOver||0)).map(d=>`<tr>
+        <td style="word-break:break-word">${esc(d.name)}</td>
+        <td class="r" style="white-space:nowrap">Due ${d.due||'—'}</td>
+        <td class="r" style="white-space:nowrap">${d.daysOver!=null?'+'+fmt(d.daysOver)+' d':''}</td>
+        <td style="width:82px"><span class="pill ${d.status==='Over due'?'e':d.status==='In-Time'?'ok':'n'}">${d.status}</span></td>
+      </tr>`).join('')}</table>
+    </div>`;
+  }).join('')||'<p style="color:var(--mu);font-size:12px">ไม่มีพนักงานที่มีเอกสารค้างในแผนกนี้ ✓</p>';
+  $('#btnDrillPdf').onclick=()=>exportDeptPdf(drillDept);
+}
+
+/* ══════════ DOCUMENT BASE TAB ══════════ */
+function buildNewDocState(){
+  if(!C){newDocState=[];return;}
+  const prev=new Map(newDocState.map(d=>[nrm(d.name),d]));
+  newDocState=C.newDocs.map(n=>{
+    const old=prev.get(nrm(n.name));
+    if(old)return{...old,users:n.users};
+    const t=guessType(n.name);
+    return{name:n.name,users:n.users,type:t,ack:fsdsAck(t),pub:'',due:'',checked:true};
+  });
+}
+function renderDocBase(){
+  const nd=newDocState;
+  $('#newDocSection').style.display=nd.length?'':'none';
+  const badge=$('#newBadge');badge.style.display=nd.length?'':'none';badge.textContent=nd.length;
+  $('#newDocTag').textContent=`${nd.length} new document${nd.length!==1?'s':''}`;
+  $('#newDocBody').innerHTML=nd.map((d,i)=>`<tr>
+    <td><input type="checkbox" ${d.checked?'checked':''} onchange="newDocState[${i}].checked=this.checked"></td>
+    <td style="font-size:11.5px;word-break:break-word">${esc(d.name)}</td>
+    <td class="r">${fmt(d.users)}</td>
+    <td><select onchange="onNewType(${i},this.value)">
+      ${['FSDS1','FSDS2','FSDS3','FSDS4','FSDS5'].map(t=>`<option value="${t}"${t===d.type?' selected':''}>${t}</option>`).join('')}
+    </select></td>
+    <td class="r" id="nack${i}">${d.ack}d</td>
+    <td><input type="date" value="${d.pub}" onchange="onNewPub(${i},this.value)"></td>
+    <td style="font-family:var(--fm);font-size:11px;color:var(--mu)" id="ndue${i}">${d.due||'—'}</td>
+  </tr>`).join('');
+
+  let rows=Object.values(docBase).map(d=>{
+    const due=effDue(d);
+    return{name:d.name,ack:d.ack,pub:d.pub||'',due,status:statusOf(due)};
+  });
+  const q=nrm($('#dbSearch').value);const sf=$('#dbStatusFilter').value;
+  if(q)rows=rows.filter(r=>nrm(r.name).includes(q));
+  if(sf)rows=rows.filter(r=>r.status===sf);
+  rows.sort((a,b)=>dbSort.d*((a[dbSort.k]>b[dbSort.k])?1:(a[dbSort.k]<b[dbSort.k])?-1:0));
+  $('#dbCount').textContent=`${rows.length} / ${Object.keys(docBase).length} documents · as of ${META.asOf||'—'}`;
+  $('#dbBody').innerHTML=rows.map(r=>`<tr>
+    <td style="font-size:11.5px;word-break:break-word;max-width:340px">${esc(r.name)}</td>
+    <td class="r">${r.ack} days</td>
+    <td class="r">${r.pub||'—'}</td>
+    <td class="r">${r.due||'—'}</td>
+    <td class="r"><span class="pill ${r.status==='Over due'?'e':'ok'}">${r.status}</span></td>
+  </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--mu);padding:16px">ยังไม่มีเอกสารใน Document Base — import ไฟล์หรือเพิ่มด้วยมือ</td></tr>';
+  $$('#tab-docbase table.dbt thead th[data-k]').forEach(th=>th.onclick=()=>{
+    const k=th.dataset.k;if(dbSort.k===k)dbSort.d*=-1;else{dbSort.k=k;dbSort.d=k==='name'?1:-1;}renderDocBase();});
+}
+function onNewType(i,t){newDocState[i].type=t;newDocState[i].ack=fsdsAck(t);$('#nack'+i).textContent=fsdsAck(t)+'d';onNewPub(i,newDocState[i].pub);}
+function onNewPub(i,v){newDocState[i].pub=v;const due=v?addDays(v,newDocState[i].ack):'';newDocState[i].due=due;$('#ndue'+i).textContent=due||'—';}
+function toggleNewAll(checked){newDocState.forEach(d=>d.checked=checked);renderDocBase();}
+async function addNewDocs(){
+  const toAdd=newDocState.filter(d=>d.checked&&d.pub);
+  if(!toAdd.length){toast('กรอก Published Date ของรายการที่เลือกก่อน',true);return;}
+  toAdd.forEach(d=>{docBase[nrm(d.name)]={name:d.name,ack:d.ack,pub:d.pub,due:addDays(d.pub,d.ack),fsds:d.type};});
+  await saveDB();
+  C=compute();buildNewDocState();
+  renderAll();
+  toast(`เพิ่ม ${toAdd.length} เอกสารเข้า Document Base ✓`);
+}
+async function addManual(){
+  const name=$('#manName').value.trim();
+  if(!name){toast('ใส่ชื่อเอกสารก่อน',true);return;}
+  const type=$('#manType').value;
+  const ack=type==='custom'?(Number($('#manAck').value)||7):fsdsAck(type);
+  const pub=$('#manPub').value;
+  docBase[nrm(name)]={name,ack,pub,due:pub?addDays(pub,ack):'',fsds:type==='custom'?'':type};
+  await saveDB();
+  C=compute();buildNewDocState();renderAll();
+  $('#manName').value='';$('#manPub').value='';
+  toast(`"${name}" added ✓`);
+}
+function onManType(){const t=$('#manType').value;$('#manAck').value=t==='custom'?7:fsdsAck(t);}
+async function handlePdfs(files){
+  for(const file of files){
+    const arr=await file.arrayBuffer();
+    const txt=new TextDecoder('latin1').decode(new Uint8Array(arr).slice(0,8000));
+    const m=txt.match(/CreationDate[^\d]*(\d{4})(\d{2})(\d{2})/)||txt.match(/D:(\d{4})(\d{2})(\d{2})/);
+    const pub=m?`${m[1]}-${m[2]}-${m[3]}`:'';
+    const fn=file.name.replace(/\.pdf$/i,'');
+    const idx=newDocState.findIndex(d=>{const dn=nrm(d.name),ff=nrm(fn);return dn.includes(ff.slice(0,18))||ff.includes(dn.slice(0,18));});
+    if(pub&&idx>=0){onNewPub(idx,pub);renderDocBase();toast(`"${fn}" → ${pub}`);}
+    else toast(`จับคู่ไม่ได้หรืออ่านวันที่ไม่ได้: "${file.name}"`,true);
+  }
+}
+
+/* ══════════ XLSX WRITER (zip stored, no compression) ══════════ */
+const CRC_T=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c;}return t;})();
+function crc32(u8){let c=~0;for(let i=0;i<u8.length;i++)c=(c>>>8)^CRC_T[(c^u8[i])&255];return(~c)>>>0;}
+function zipStore(entries){
+  const enc=new TextEncoder();const parts=[];const cd=[];let off=0;
+  for(const f of entries){
+    const data=typeof f.data==='string'?enc.encode(f.data):f.data;
+    const nameB=enc.encode(f.name);const crc=crc32(data);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,data.length,true);lh.setUint32(22,data.length,true);
+    lh.setUint16(26,nameB.length,true);
+    parts.push(new Uint8Array(lh.buffer),nameB,data);
+    cd.push({nameB,crc,size:data.length,off});
+    off+=30+nameB.length+data.length;
+  }
+  const cdStart=off;
+  for(const c of cd){
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);
+    ch.setUint32(16,c.crc,true);ch.setUint32(20,c.size,true);ch.setUint32(24,c.size,true);
+    ch.setUint16(28,c.nameB.length,true);ch.setUint32(42,c.off,true);
+    parts.push(new Uint8Array(ch.buffer),c.nameB);
+    off+=46+c.nameB.length;
+  }
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true);eo.setUint16(8,cd.length,true);eo.setUint16(10,cd.length,true);
+  eo.setUint32(12,off-cdStart,true);eo.setUint32(16,cdStart,true);
+  parts.push(new Uint8Array(eo.buffer));
+  return new Blob(parts,{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+const xmlEsc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function exportDocBaseXlsx(){
+  const rows=Object.values(docBase).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!rows.length){toast('Document Base ว่างเปล่า',true);return;}
+  const today=todayISO();
+  let sd='<row r="1">'+
+    ['Row Labels','Published Date','Acknowledge period','Due Date','Invalid period','','Date of Today']
+    .map((h,i)=>h?`<c r="${String.fromCharCode(65+i)}1" t="inlineStr" s="2"><is><t>${xmlEsc(h)}</t></is></c>`:'').join('')+'</row>';
+  rows.forEach((d,i)=>{
+    const rn=i+2;
+    let cells=`<c r="A${rn}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(d.name)}</t></is></c>`;
+    if(d.pub)cells+=`<c r="B${rn}" s="1"><v>${isoToSerial(d.pub)}</v></c>`;
+    cells+=`<c r="C${rn}"><v>${Number(d.ack)||7}</v></c>`;
+    cells+=`<c r="D${rn}" s="1"><f>B${rn}+C${rn}</f></c>`;
+    cells+=`<c r="E${rn}" t="str"><f>IF($G$2&lt;D${rn},"In-Time","Over due")</f></c>`;
+    if(i===0)cells+=`<c r="G2" s="1"><v>${isoToSerial(today)}</v></c>`;
+    sd+=`<row r="${rn}">${cells}</row>`;
+  });
+  const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="${NS}"><cols><col min="1" max="1" width="80" customWidth="1"/><col min="2" max="2" width="18" customWidth="1"/><col min="3" max="3" width="18" customWidth="1"/><col min="4" max="4" width="15" customWidth="1"/><col min="5" max="5" width="17" customWidth="1"/><col min="7" max="7" width="20" customWidth="1"/></cols><sheetData>${sd}</sheetData></worksheet>`;
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="${NS}"><numFmts count="1"><numFmt numFmtId="165" formatCode="[$-409]d\\-mmm\\-yy;@"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>`;
+  const workbook=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="${NS}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Over Due Doc" sheetId="1" r:id="rId1"/></sheets><calcPr fullCalcOnLoad="1"/></workbook>`;
+  const wbRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+  const rootRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const cts=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  try{
+    const blob=zipStore([
+      {name:'[Content_Types].xml',data:cts},
+      {name:'_rels/.rels',data:rootRels},
+      {name:'xl/workbook.xml',data:workbook},
+      {name:'xl/_rels/workbook.xml.rels',data:wbRels},
+      {name:'xl/styles.xml',data:styles},
+      {name:'xl/worksheets/sheet1.xml',data:sheet},
+    ]);
+    downloadBlob(blob,`Document_Base_${today}.xlsx`);
+    toast(`Exported ${rows.length} documents (พร้อมสูตร Due Date + Status)`);
+  }catch(e){toast('Excel export failed: '+e.message,true);}
+}
+
+/* ══════════ EXPORT — Dept PDF (HTML download, auto print) ══════════ */
+function exportDeptPdf(dept){
+  if(!C){toast('No data',true);return;}
+  const today=todayISO();
+  const agg=aggDepts(null).find(a=>a.dept===dept)||{dept,people:0,overUsers:0,over:0,intime:0,unknown:0};
+  const docMap=new Map();
+  C.users.filter(u=>u.dept===dept).forEach(u=>u.docs.forEach(d=>{
+    const e=docMap.get(nrm(d.name))||{...d,users:0};e.users++;docMap.set(nrm(d.name),e);
+  }));
+  const docRows=[...docMap.values()].sort((a,b)=>(b.daysOver||0)-(a.daysOver||0));
+  const overdue=docRows.filter(r=>r.status==='Over due');
+  const intime=docRows.filter(r=>r.status==='In-Time');
+  const unknown=docRows.filter(r=>r.status==='Unknown');
+  const userRows=C.users.filter(u=>u.dept===dept).sort((a,b)=>b.over-a.over);
+  const tbl=rows=>rows.length?rows.map(r=>`<tr>
+    <td style="word-break:break-word">${esc(r.name)}</td>
+    <td class="mo">${r.pub||'—'}</td>
+    <td style="text-align:right">${r.ack?r.ack+'d':'—'}</td>
+    <td class="mo">${r.due||'—'}</td>
+    <td style="text-align:right">${r.daysOver!=null?'+'+r.daysOver+'d':'—'}</td>
+    <td style="font-weight:600;color:${r.status==='Over due'?'#dc2626':r.status==='In-Time'?'#1f9d6b':'#8496a6'}">${r.status}</td>
+    <td style="text-align:right">${r.users}</td></tr>`).join('')
+    :'<tr><td colspan="7" style="text-align:center;color:#8496a6;padding:10px">—</td></tr>';
+  const cg='<colgroup><col style="width:33%"><col style="width:12%"><col style="width:6%"><col style="width:12%"><col style="width:9%"><col style="width:12%"><col style="width:8%"></colgroup>';
+  const th='<thead><tr><th>Document</th><th>Published</th><th>Ack</th><th>Due Date</th><th style="text-align:right">Days over</th><th>Status</th><th style="text-align:right">Users</th></tr></thead>';
+  const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<title>Overdue Report — ${esc(dept)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:9pt;color:#111}
+.pg{padding:12mm 15mm 10mm}.hdr{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;padding-bottom:9px;border-bottom:2.5px solid #4472c4}
+.logo{width:42px;height:42px;border-radius:7px;background:#12558f;display:flex;align-items:center;justify-content:center;flex:none;color:#fff;font-weight:700;font-size:9px;text-align:center;line-height:1.3}
+h1{font-size:13pt;color:#0d4373;margin:0 0 2px}.sub{font-size:8pt;color:#5c6f80}.meta{margin-left:auto;text-align:right;font-size:8pt;color:#5c6f80;font-family:monospace;line-height:1.6}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px}
+.kpi{border:1px solid #d4dce6;border-radius:6px;padding:6px 9px}.kpi.e{border-left:3px solid #dc2626}.kpi.w{border-left:3px solid #d97706}.kpi.b{border-left:3px solid #4472c4}.kpi.ok{border-left:3px solid #1f9d6b}
+.kl{font-size:7pt;color:#5c6f80;margin-bottom:1px}.kv{font-size:15pt;font-weight:700;color:#0b1b2b}
+h2{font-size:10pt;color:#0d4373;margin:9px 0 5px;padding-bottom:2px;border-bottom:1.5px solid #4472c4;display:flex;justify-content:space-between}
+h2 span{font-size:8.5pt;font-weight:normal;color:#5c6f80}
+table{border-collapse:collapse;width:100%;margin-bottom:9px;font-size:8pt;table-layout:fixed}
+thead tr{background:#4472c4;color:#fff}th{padding:4px 6px;text-align:left;font-size:7.5pt}
+td{padding:4px 6px;border-bottom:1px solid #e8edf3;vertical-align:top}tr:nth-child(even){background:#f5f8fb}
+td.mo{font-family:monospace;font-size:8pt;white-space:nowrap}
+tfoot td{background:#e7f0f8;font-weight:700;border-top:1.5px solid #4472c4;padding:4px 6px}
+.foot{margin-top:12px;padding-top:7px;border-top:1px solid #d4dce6;font-size:7pt;color:#8496a6;display:flex;justify-content:space-between}
+.pbtn{position:fixed;top:12px;right:12px;background:#4472c4;color:#fff;border:none;border-radius:7px;padding:9px 18px;font-size:11pt;cursor:pointer;font-family:Arial;font-weight:600;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.pbtn:hover{background:#2f5aa8}@page{margin:9mm;size:A4 portrait}@media print{.pbtn{display:none}}
+</style></head><body>
+<button class="pbtn" onclick="window.print()">🖨 Print / Save PDF</button>
+<div class="pg">
+<div class="hdr"><div class="logo">K-MILE<br>AIR</div>
+  <div><h1>Overdue Acknowledgement Report</h1><div class="sub">Department: <b>${esc(dept)}</b> · Snapshot: ${META.snapshot||today} · Status as of: ${today}</div></div>
+  <div class="meta">Generated: ${new Date().toLocaleDateString('en-GB')}<br>K-Mile Air Co., Ltd.<br>Compliance Monitoring</div></div>
+<div class="kpis">
+  <div class="kpi e"><div class="kl">Overdue documents</div><div class="kv">${agg.over}</div></div>
+  <div class="kpi w"><div class="kl">Users with overdue</div><div class="kv">${agg.overUsers}</div></div>
+  <div class="kpi ok"><div class="kl">In-Time pending</div><div class="kv">${agg.intime}</div></div>
+  <div class="kpi b"><div class="kl">Total people</div><div class="kv">${agg.people}</div></div></div>
+<h2>Overdue Documents <span>${overdue.length} items</span></h2>
+<table>${cg}${th}<tbody>${tbl(overdue)}</tbody>
+<tfoot><tr><td colspan="6">Total overdue</td><td style="text-align:right">${overdue.length}</td></tr></tfoot></table>
+${intime.length?`<h2>In-Time Pending <span>${intime.length} items</span></h2><table>${cg}${th}<tbody>${tbl(intime)}</tbody></table>`:''}
+${unknown.length?`<h2>Unknown (not in Document Base) <span>${unknown.length} items</span></h2><table>${cg}${th}<tbody>${tbl(unknown)}</tbody></table>`:''}
+<h2>User Status <span>${userRows.length} people</span></h2>
+<table><colgroup><col style="width:22%"><col style="width:32%"><col style="width:12%"><col style="width:12%"><col style="width:14%"></colgroup>
+<thead><tr><th>Name</th><th>Email</th><th style="text-align:right">Overdue</th><th style="text-align:right">In-Time</th><th>Status</th></tr></thead>
+<tbody>${userRows.map(r=>`<tr>
+  <td>${esc((r.first+' '+r.last).trim()||'—')}</td>
+  <td style="font-family:monospace;font-size:7.5pt;word-break:break-all">${esc(r.u)}</td>
+  <td style="text-align:right"><b>${r.over}</b></td>
+  <td style="text-align:right">${r.intime}</td>
+  <td style="font-weight:600;color:${r.over>0?'#dc2626':'#1f9d6b'}">${r.over>0?'Overdue':'OK'}</td>
+</tr>`).join('')}</tbody></table>
+<div class="foot"><span>K-Mile Air Co., Ltd. · Compliance Monitoring · Confidential</span><span>Generated ${new Date().toLocaleString('en-GB')}</span></div>
+</div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});<\/script>
+</body></html>`;
+  downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),`KMile_Overdue_${dept.replace(/[^a-zA-Z0-9\-]/g,'_')}_${today}.html`);
+  toast(`ดาวน์โหลดรายงานแผนก ${dept} แล้ว — เปิดไฟล์จะขึ้นหน้า Print/Save PDF อัตโนมัติ`);
+}
+
+/* ══════════ EXPORT — CSV / PNG ══════════ */
+function exportCsv(){
+  if(!C)return;
+  const agg=aggDepts(null).sort((a,b)=>b.over-a.over);
+  const lines=['Department,People,Users with overdue,Overdue docs,In-Time pending,Unknown',
+    ...agg.map(a=>`"${a.dept}",${a.people},${a.overUsers},${a.over},${a.intime},${a.unknown}`),
+    `"Grand Total",${agg.reduce((s,a)=>s+a.people,0)},${agg.reduce((s,a)=>s+a.overUsers,0)},${agg.reduce((s,a)=>s+a.over,0)},${agg.reduce((s,a)=>s+a.intime,0)},${agg.reduce((s,a)=>s+a.unknown,0)}`];
+  downloadBlob(new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'}),'kmile_dept_'+(META.snapshot||todayISO())+'.csv');
+}
+function downloadCanvas(canvas,filename){
+  canvas.toBlob(b=>{if(b)downloadBlob(b,filename);else toast('Export failed',true);},'image/png');
+}
+function exportChart(){
+  const src=$('#deptChart');if(!src.width)return;
+  const dpr=window.devicePixelRatio||1,h=52*dpr;
+  const cv=document.createElement('canvas');cv.width=src.width;cv.height=src.height+h;
+  const g=cv.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
+  g.fillStyle='#0b1b2b';g.font=`600 ${17*dpr}px sans-serif`;g.fillText($('#chartTitle').textContent,18*dpr,26*dpr);
+  g.fillStyle='#5c6f80';g.font=`${10*dpr}px monospace`;g.fillText('K-Mile Air · snapshot '+(META.snapshot||'')+' · status as of '+todayISO(),18*dpr,44*dpr);
+  g.drawImage(src,0,h);
+  downloadCanvas(cv,'kmile_chart_'+(META.snapshot||todayISO())+'.png');
+}
+function exportBoard(){
+  const src=$('#deptChart');if(!src.width)return;
+  const agg=aggDepts(selDepts).filter(a=>a[metric]>0).sort((a,b)=>b[metric]-a[metric]);
+  const total=agg.reduce((s,a)=>s+a[metric],0);
+  const dpr=window.devicePixelRatio||1;
+  const rowH=22*dpr,tblTop=64*dpr;
+  const W=src.width,tblH=tblTop+(agg.length+2)*rowH+20*dpr;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=56*dpr+src.height+tblH;
+  const g=cv.getContext('2d');
+  g.fillStyle='#fff';g.fillRect(0,0,cv.width,cv.height);
+  g.fillStyle='#0b1b2b';g.fillRect(0,0,W,56*dpr);
+  g.fillStyle='#fff';g.font=`700 ${19*dpr}px sans-serif`;g.fillText('K-Mile Air — Overdue Acknowledgement by Department',20*dpr,30*dpr);
+  g.fillStyle='#b9cbdb';g.font=`${10*dpr}px monospace`;g.fillText('Snapshot: '+(META.snapshot||'')+' · '+MLBL[metric]+' · status as of '+todayISO(),20*dpr,47*dpr);
+  g.drawImage(src,0,56*dpr);
+  let y=56*dpr+src.height;
+  g.fillStyle='#0d4373';g.font=`600 ${13*dpr}px sans-serif`;g.fillText('Summary — '+MLBL[metric],20*dpr,y+32*dpr);
+  y+=tblTop;
+  g.font=`600 ${11*dpr}px sans-serif`;
+  g.fillStyle='#7f9a3f';g.fillRect(20*dpr,y-15*dpr,W-40*dpr,rowH);
+  g.fillStyle='#fff';g.fillText('Department',28*dpr,y);g.textAlign='right';g.fillText('Count',W-30*dpr,y);g.textAlign='left';
+  y+=rowH;
+  g.font=`${11*dpr}px sans-serif`;
+  agg.forEach((a,i)=>{
+    if(i%2){g.fillStyle='#f9fbf5';g.fillRect(20*dpr,y-15*dpr,W-40*dpr,rowH);}
+    g.fillStyle='#20364a';g.fillText(a.dept,28*dpr,y);
+    g.textAlign='right';g.font=`${11*dpr}px monospace`;g.fillText(fmt(a[metric]),W-30*dpr,y);g.textAlign='left';g.font=`${11*dpr}px sans-serif`;
+    y+=rowH;
+  });
+  g.fillStyle='#eef3e2';g.fillRect(20*dpr,y-15*dpr,W-40*dpr,rowH);
+  g.fillStyle='#0b1b2b';g.font=`700 ${11*dpr}px sans-serif`;g.fillText('Grand Total',28*dpr,y);
+  g.textAlign='right';g.fillText(fmt(total),W-30*dpr,y);g.textAlign='left';
+  downloadCanvas(cv,'kmile_dashboard_'+(META.snapshot||todayISO())+'.png');
+  toast('Dashboard PNG exported');
+}
+
+/* ══════════ DEPT FILTER ══════════ */
+function getAllDepts(){if(!C)return[];return[...new Set(C.users.filter(u=>u.dept!=='Unassigned').map(u=>u.dept))].sort();}
+function openDeptFilter(){
+  const p=$('#dfPanel');if(p.classList.contains('open')){closeDeptFilter();return;}
+  dfTmp=selDepts?new Set(selDepts):null;dfQ='';$('#dfSearch').value='';
+  renderDFList();p.classList.add('open');$('#dfBtn').classList.add('on');$('#dfSearch').focus();
+}
+function closeDeptFilter(){$('#dfPanel').classList.remove('open');if(!selDepts)$('#dfBtn').classList.remove('on');}
+function renderDFList(){
+  const depts=getAllDepts();const q=nrm(dfQ);const fd=q?depts.filter(d=>nrm(d).includes(q)):depts;
+  const isAll=dfTmp===null;
+  $('#dfList').innerHTML=fd.map((d,i)=>`<div class="dfitem"><input type="checkbox" id="dfc${i}" value="${esc(d)}" ${isAll||dfTmp.has(d)?'checked':''} onchange="onDFC(this)"><label for="dfc${i}">${esc(d)}</label></div>`).join('')||'<div style="padding:10px 11px;font-size:11.5px;color:var(--mu)">No match</div>';
+}
+function onDFC(el){const all=getAllDepts();if(dfTmp===null)dfTmp=new Set(all);
+  if(el.checked)dfTmp.add(el.value);else dfTmp.delete(el.value);if(dfTmp.size===all.length)dfTmp=null;}
+function applyDF(){selDepts=dfTmp;updateDFLabel();closeDeptFilter();renderChart();renderRows();}
+function updateDFLabel(){const all=getAllDepts().length;
+  if(!selDepts){$('#dfLabel').textContent='All Departments';$('#dfBtn').classList.remove('on');}
+  else{$('#dfLabel').textContent=selDepts.size===1?[...selDepts][0]:`${selDepts.size} / ${all} Depts`;$('#dfBtn').classList.add('on');}}
+
+/* ══════════ META / RENDER ALL ══════════ */
+function renderMeta(){
+  if(hasData()){
+    $('#liveDot').className='dot';$('#liveTxt').textContent='Data loaded';
+    $('#metaSnap').textContent=META.snapshot||'—';$('#metaAsOf').textContent=META.asOf||'—';
+    $('#metaUsers').textContent=UP.length;$('#metaDocs').textContent=Object.keys(docBase).length;
+  }else{
+    $('#liveDot').className='dot off';$('#liveTxt').textContent='No data';
+    $('#metaSnap').textContent='—';$('#metaAsOf').textContent=META.asOf||'—';
+    $('#metaUsers').textContent='—';$('#metaDocs').textContent=Object.keys(docBase).length||'—';
+  }
+  $('#storedInfo').innerHTML=`<b>ข้อมูลที่เก็บอยู่ในระบบตอนนี้:</b> User Performance ${UP.length?`✓ ${UP.length} users`:'— ยังไม่มี'} · Users mapping ✓ ${Object.keys(userMap).length} รายการ · Document Base ✓ ${Object.keys(docBase).length} เอกสาร${META.asOf?` (as of ${META.asOf})`:''}${META.snapshot?` · snapshot ล่าสุด ${META.snapshot}`:''}`;
+}
+function renderAll(){
+  renderMeta();
+  const has=hasData();
+  $('#dashEmpty').style.display=has?'none':'';
+  $('#dashMain').style.display=has?'':'none';
+  if(has){
+    updateDFLabel();renderKPIs();renderChart();renderRows();
+  }
+  renderDetail();renderDocBase();
+}
+
+/* ══════════ IMPORT FLOW ══════════ */
+function checkReady(){
+  const willUP=raw.up||((UP.length)?UP:null);
+  const willMap=raw.users?{...userMap,...raw.users}:userMap;
+  const anyNew=!!(raw.up||raw.doc||raw.users);
+  const ok=anyNew&&!!willUP;
+  $('#btnPublish').disabled=!ok;
+  if(!anyNew){$('#importPreview').style.display='none';return;}
+  if(!willUP){
+    $('#prevNote').textContent='ยังไม่มีข้อมูล User Performance — อัปโหลดไฟล์ที่ 1 ก่อนจึงจะ publish ได้';
+    $('#importPreview').style.display='';$('#prevKpis').innerHTML='';return;
+  }
+  const willDB=raw.doc?mergedDB(docBase,raw.doc.docs):docBase;
+  const P=computeWith(willUP,willMap,willDB);
+  const rows=P.users.filter(u=>u.dept!=='Unassigned');
+  const totalOver=rows.reduce((s,u)=>s+u.over,0);
+  const depts=new Set(rows.map(u=>u.dept));
+  $('#prevNote').textContent=[raw.up?'UP: ไฟล์ใหม่':'UP: ใช้ของเดิม',raw.doc?'DocBase: merge ไฟล์ใหม่':'DocBase: ใช้ของเดิม',raw.users?'Users: ไฟล์ใหม่':'Users: ใช้ของเดิม'].join(' · ');
+  $('#prevKpis').innerHTML=[
+    ['Users',fmt(willUP.length),''],
+    ['Overdue docs',fmt(totalOver),'คำนวณจริงหลัง join'],
+    ['Departments',fmt(depts.size),'ไม่รวม Unassigned'],
+    ['Doc Base',fmt(Object.keys(willDB).length),raw.doc&&raw.doc.asOf?('as of '+raw.doc.asOf):''],
+    ['New docs',fmt(P.newDocs.length),P.newDocs.length?'ต้องเพิ่มข้อมูล':'ครบถ้วน'],
+  ].map(([l,v,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:20px">${v}</div><div class="c">${c}</div></div>`).join('');
+  $('#importPreview').style.display='';
+}
+function mergedDB(base,add){
+  const out={};for(const[k,v]of Object.entries(base))out[k]={...v};
+  for(const[k,v]of Object.entries(add)){
+    if(!out[k])out[k]={...v};
+    else{const e=out[k];if(!e.pub&&v.pub)e.pub=v.pub;if(!e.due&&v.due)e.due=v.due;if(!e.ack&&v.ack)e.ack=v.ack;}
+  }
+  return out;
+}
+async function handleImport(n,file){
+  const st=$('#st'+n);
+  st.className='callout ok';
+  try{
+    toast('กำลังอ่าน '+file.name+'…');
+    const wb=await readWorkbook(file);
+    if(n===1){raw.up=parseUP(wb);st.innerHTML=`✓ <b>User Performance</b> — ${raw.up.length} users`;}
+    else if(n===2){const r=parseDocBase(wb);raw.doc=r;st.innerHTML=`✓ <b>Document Base</b> — ${Object.keys(r.docs).length} docs${r.asOf?` · as of ${r.asOf}`:''}`;}
+    else{raw.users=parseUsers(wb);st.innerHTML=`✓ <b>Users</b> — ${Object.keys(raw.users).length} mapped`;}
+    st.style.display='';toast('อ่าน '+file.name+' สำเร็จ ✓');checkReady();
+  }catch(e){
+    st.className='callout e';st.innerHTML='✗ '+esc(e.message);st.style.display='';
+    toast('อ่านไฟล์ไม่สำเร็จ: '+e.message,true);
+  }
+}
+async function publish(){
+  try{
+    if(raw.users)userMap={...userMap,...raw.users};
+    if(raw.doc){docBase=mergedDB(docBase,raw.doc.docs);if(raw.doc.asOf)META.asOf=raw.doc.asOf;}
+    if(raw.up)UP=raw.up;
+    META.snapshot=$('#snapDate').value||todayISO();
+    await saveAll();
+    C=compute();buildNewDocState();
+    raw={up:null,doc:null,docAsOf:'',users:null};
+    [1,2,3].forEach(n=>$('#st'+n).style.display='none');
+    $('#importPreview').style.display='none';$('#btnPublish').disabled=true;
+    renderAll();go('dash');
+    toast(`Published ✓ ${UP.length} users · ${Object.keys(docBase).length} docs in base`);
+  }catch(e){toast('Publish failed: '+e.message,true);}
+}
+
+/* ══════════ NAV ══════════ */
+function go(tab){
+  $$('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));
+  $$('.panel').forEach(p=>p.classList.toggle('on',p.id==='tab-'+tab));
+  if(tab==='dash'&&hasData())setTimeout(renderChart,40);
+}
+
+/* ══════════ WIRE-UP ══════════ */
+$$('nav button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
+$('#metricSel').onchange=()=>{metric=$('#metricSel').value;renderChart();};
+$$('#modeSeg button').forEach(b=>b.onclick=()=>{
+  dashMode=b.dataset.m;
+  $$('#modeSeg button').forEach(x=>x.classList.toggle('on',x.dataset.m===dashMode));
+  $('#dashSummary').style.display=dashMode==='summary'?'':'none';
+  $('#dashRows').style.display=dashMode==='rows'?'':'none';
+  if(dashMode==='summary')renderChart();else renderRows();
+});
+const chartCv=$('#deptChart');
+chartCv.addEventListener('click',ev=>{const b=chartHit(ev);if(b)openDrill(b.dept);});
+chartCv.addEventListener('mousemove',ev=>{
+  const b=chartHit(ev);const tip=$('#chartTip');
+  chartCv.style.cursor=b?'pointer':'default';
+  if(b){tip.style.opacity='1';tip.style.left=(b.x+b.w/2)+'px';tip.style.top=b.y+'px';tip.textContent=`${b.dept}: ${fmt(b.v)}`;}
+  else tip.style.opacity='0';
+});
+chartCv.addEventListener('mouseleave',()=>{$('#chartTip').style.opacity='0';});
+window.addEventListener('resize',()=>{if(hasData()&&$('#tab-dash').classList.contains('on')&&dashMode==='summary')renderChart();});
+$('#dfBtn').onclick=openDeptFilter;
+$('#dfAll').onclick=()=>{dfTmp=null;renderDFList();};
+$('#dfNone').onclick=()=>{dfTmp=new Set();renderDFList();};
+$('#dfApply').onclick=applyDF;$('#dfClose').onclick=closeDeptFilter;
+$('#dfSearch').oninput=e=>{dfQ=e.target.value;renderDFList();};
+document.addEventListener('click',e=>{if($('#dfWrap')&&!$('#dfWrap').contains(e.target))closeDeptFilter();});
+$('#rowSearch').oninput=renderRows;$('#rowStatus').onchange=renderRows;
+$('#detSearch').oninput=renderDetail;
+$('#dbSearch').oninput=renderDocBase;$('#dbStatusFilter').onchange=renderDocBase;
+$('#btnAddNew').onclick=addNewDocs;
+$('#btnManAdd').onclick=addManual;
+$('#pdfInput').onchange=e=>{if(e.target.files.length)handlePdfs([...e.target.files]);e.target.value='';};
+$('#btnExDbXlsx').onclick=exportDocBaseXlsx;
+$('#btnExChart').onclick=exportChart;
+$('#btnExBoard').onclick=exportBoard;
+$('#btnExCsv').onclick=exportCsv;
+[1,2,3].forEach(n=>{
+  const drop=$('#drop'+n),fi=$('#fi'+n);
+  drop.onclick=()=>fi.click();
+  fi.onchange=e=>{if(e.target.files[0])handleImport(n,e.target.files[0]);fi.value='';};
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+  drop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleImport(n,e.dataTransfer.files[0]);});
+});
+$('#btnPublish').onclick=publish;
+$('#btnClearImport').onclick=()=>{raw={up:null,doc:null,docAsOf:'',users:null};[1,2,3].forEach(n=>$('#st'+n).style.display='none');$('#importPreview').style.display='none';$('#btnPublish').disabled=true;};
+$('#snapDate').value=todayISO();
+
+$('#btnShareHtml').onclick=exportShareHtml;
+
+/* ══════════ BOOT ══════════ */
+(async()=>{
+  if(!storageOK)$('#storeWarn').style.display='';
+  loadAll();
+  const emb=readEmbedded();
+  if(emb&&(!UP.length||(emb.savedAt||'')>(META.savedAt||''))){
+    UP=emb.UP;userMap={...SEED_MAP,...(emb.userMap||{})};docBase=emb.docBase||{};
+    META={...(emb.META||{}),savedAt:emb.savedAt||''};
+    if(storageOK)await saveAll();
+    $('#embedInfo').style.display='';
+    $('#embedWhen').textContent=(emb.savedAt||'').replace('T',' ').slice(0,16)||'—';
+  }
+  C=compute();buildNewDocState();
+  renderAll();
+})();
+</script>
+</body>
+</html>
