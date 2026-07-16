@@ -238,6 +238,7 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
 <nav>
   <button class="on" data-tab="dash">Dashboard</button>
   <button data-tab="detail">Department Detail</button>
+  <button data-tab="userdet">User Detail <span class="nbadge" id="udBadge" style="display:none"></span></button>
   <button data-tab="docbase">Document Base <span class="nbadge" id="newBadge" style="display:none">!</span></button>
   <button data-tab="import">Import</button>
   <button data-tab="guide">Guideline</button>
@@ -366,10 +367,63 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
   </div>
 </section>
 
+<!-- ═══ 02b USER DETAIL ═══ -->
+<section class="panel" id="tab-userdet">
+  <div class="sh">User Detail — Cross-check WM Users ⇄ User Base <span class="rl"></span></div>
+  <p class="sn">เทียบรายชื่อจากไฟล์ users.xlsx (WM) กับ User Base Data เพื่อหา gap · การจัดกลุ่ม dashboard / performance / document base ใช้ Description จาก <b>User Base ก่อน</b> ถ้าไม่มีจึงใช้ค่าจาก WM</p>
+  <div id="udEmpty" class="empty"><h3>ยังไม่มีข้อมูล</h3><p>Import ไฟล์ users.xlsx (WM) และ/หรือ User_Base.xlsx ก่อน</p></div>
+  <div id="udMain" style="display:none">
+    <div class="g4" id="udKpis" style="margin-bottom:14px"></div>
+
+    <div id="udNewSection" style="display:none;margin-bottom:16px">
+      <div class="card">
+        <div class="ch">
+          <h3 style="color:var(--warn)">⚠ Users ใหม่จาก WM (ยังไม่มีใน User Base)</h3>
+          <div class="sp"></div>
+          <span class="tag" id="udNewTag"></span>
+          <button class="btn ok" id="btnUdAdd">✓ Add checked to User Base</button>
+        </div>
+        <div class="cb" style="padding:10px 13px 13px">
+          <p style="font-size:11.5px;color:var(--mu);margin-bottom:9px">ระบุ Description ให้ละเอียด (เช่น FD Pilot B734 / B738 / B763 หรือ "FD Pilot B734, B738" สำหรับ Mix — พิมพ์เองหรือเลือกจากรายการที่เคยมี) แล้วกด Add — ระบบบันทึกลง User Base ทันทีและใช้จัดกลุ่ม dashboard ต่อ · เสร็จแล้วอย่าลืม <b>Export CSV</b> นำไปอัปเดตไฟล์ User_Base.xlsx ต้นฉบับให้ตรงกันด้วย</p>
+          <div class="tbl-wrap" style="max-height:300px">
+            <table class="dbt">
+              <thead><tr>
+                <th><input type="checkbox" id="chkUdAll" checked onchange="toggleUdAll(this.checked)"></th>
+                <th>Email</th><th>Name</th><th>WM Description</th><th style="min-width:230px">Description สำหรับ User Base</th>
+              </tr></thead>
+              <tbody id="udNewBody"></tbody>
+            </table>
+          </div>
+          <datalist id="udDescList"></datalist>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-bottom:10px">
+      <input class="inp srch" id="udSearch" placeholder="Search email / name / description…">
+      <select class="sel" id="udStatus">
+        <option value="">All status</option>
+        <option value="Different">Different (FD only)</option>
+        <option value="Missing in User Base">Missing in User Base</option>
+        <option value="Not in WM">Not in WM (stale)</option>
+        <option value="Matched">Matched</option>
+      </select>
+      <div class="sp"></div>
+      <span class="tag" id="udTag"></span>
+      <button class="btn" id="btnUdCsv">Export CSV</button>
+    </div>
+    <div class="tbl-wrap" style="max-height:560px">
+      <table class="dt"><thead><tr>
+        <th>Email</th><th>Name</th><th>WM Description</th><th>User Base Description</th><th>Effective (ใช้จริง)</th><th>Status</th>
+      </tr></thead><tbody id="udBody"></tbody></table>
+    </div>
+  </div>
+</section>
+
 <!-- ═══ 03 DOCUMENT BASE ═══ -->
 <section class="panel" id="tab-docbase">
   <div class="sh">Document Base <span class="rl"></span></div>
-  <p class="sn">ทะเบียนเอกสารหลัก สะสมข้ามการ import (ไม่ลบของเก่า) · Due Date = Published Date + Acknowledge period · สถานะคำนวณใหม่จากวันที่ปัจจุบัน · Export เป็น Excel เพื่อใช้เป็น base data รอบถัดไป</p>
+  <p class="sn">ทะเบียนเอกสารหลัก สะสมข้ามการ import (ไม่ลบของเก่า) · Due Date = Published Date + Acknowledge period · สถานะคำนวณใหม่จากวันที่ปัจจุบัน · Export เป็น Excel เพื่อใช้เป็น base data รอบถัดไป · <b>แก้ Published Date / Ack ได้ในตารางโดยตรง</b> (Due Date และสถานะคำนวณใหม่ทันที)</p>
 
   <div id="newDocSection" style="display:none;margin-bottom:18px">
     <div class="card">
@@ -448,13 +502,13 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
 <!-- ═══ 04 IMPORT ═══ -->
 <section class="panel" id="tab-import">
   <div class="sh">Import Data <span class="rl"></span></div>
-  <p class="sn">อัปโหลดไฟล์ Excel ที่ export จากระบบ · ไม่จำเป็นต้องครบ 3 ไฟล์ทุกครั้ง — ไฟล์ที่ไม่ได้อัปโหลดจะใช้ข้อมูลเดิมที่เคย import ไว้</p>
+  <p class="sn">อัปโหลดไฟล์ Excel ที่ export จากระบบ · ไม่จำเป็นต้องครบทุกไฟล์ทุกครั้ง — ไฟล์ที่ไม่ได้อัปโหลดจะใช้ข้อมูลเดิมที่เคย import ไว้ · <b>User Base (ไฟล์ที่ 4)</b> คือทะเบียนกลุ่มละเอียด (fleet ฯลฯ) ที่ทีมดูแลเอง — ถ้า user มีข้อมูลใน User Base ระบบจะใช้ Description จาก User Base เป็นหลักในการจัดกลุ่ม dashboard แทนค่าจาก WM</p>
 
   <div class="notice blue">
-    💾 <span><b>ข้อมูลถูกเก็บในเบราว์เซอร์ของเครื่องนี้</b> (localStorage) — เปิดหน้านี้ครั้งถัดไปข้อมูลยังอยู่ · ต้องการส่งให้คนอื่นดู ให้กดปุ่ม <b>"Save HTML พร้อมข้อมูล"</b> มุมขวาบน จะได้ไฟล์ HTML ไฟล์เดียวที่ฝังข้อมูลไว้ในตัว ผู้รับเปิดดูได้ทันทีไม่ต้อง import · Document Base ถูก merge สะสม ไม่ลบของเก่า</span>
+    💾 <span><b>ข้อมูลถูกเก็บในเบราว์เซอร์ของเครื่องนี้</b> (localStorage) — เปิดหน้านี้ครั้งถัดไปข้อมูลยังอยู่ · ต้องการส่งให้คนอื่นดู ให้กดปุ่ม <b>"Save HTML พร้อมข้อมูล"</b> มุมขวาบน จะได้ไฟล์ HTML ไฟล์เดียวที่ฝังข้อมูลไว้ในตัว ผู้รับเปิดดูได้ทันทีไม่ต้อง import · Document Base ถูก merge สะสม ไม่ลบของเก่า — ไฟล์ Document Base ที่ import ใหม่จะ<b>อัปเดต Published Date/Ack ของเอกสารเดิมให้อัตโนมัติ</b> (เอกสาร publish ใหม่แค่แก้วันในไฟล์ Excel หรือแก้ในแท็บ Document Base ได้เลย)</span>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px" id="dropGrid">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:14px;margin-bottom:18px" id="dropGrid">
     <div>
       <div class="drop" id="drop1"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
         <h3>User-Performance.xlsx</h3>
@@ -481,6 +535,15 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
         <input type="file" id="fi3" accept=".xlsx,.xls,.csv" hidden>
       </div>
       <div id="st3" class="callout ok" style="margin-top:7px;display:none"></div>
+    </div>
+    <div>
+      <div class="drop" id="drop4"><div class="di"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <h3>User_Base.xlsx</h3>
+        <p>Email · Description ละเอียด (fleet: FD Pilot B734/B738/B763, Mix ฯลฯ)</p>
+        <button class="btn p" style="margin-top:9px" type="button">Choose file</button>
+        <input type="file" id="fi4" accept=".xlsx,.xls,.csv" hidden>
+      </div>
+      <div id="st4" class="callout ok" style="margin-top:7px;display:none"></div>
     </div>
   </div>
 
@@ -574,13 +637,14 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
 const SEED_MAP={}; /* department map is populated by importing users.xlsx (employee emails stripped from the public-hosted copy) */
 
 /* ══════════ STATE ══════════ */
-const SK={up:'kmile_ack_up',map:'kmile_ack_map',db:'kmile_ack_db',meta:'kmile_ack_meta',pref:'kmile_ack_pref'};
+const SK={up:'kmile_ack_up',map:'kmile_ack_map',db:'kmile_ack_db',meta:'kmile_ack_meta',pref:'kmile_ack_pref',ubase:'kmile_ack_ubase'};
 let UP=[];                    // [{u,first,last,updates,reminders,unread:[]}]
-let userMap={...SEED_MAP};    // email → Description
+let userMap={...SEED_MAP};    // email → Description (WM users.xlsx)
+let userBase={};              // email → {desc,first,last} — curated User Base (fleet detail), overrides userMap
 let docBase={};               // nrm(name) → {name,ack,pub,due,fsds}
 let META={snapshot:'',asOf:''};
 let C=null;                   // computed: {users,newDocs}
-let raw={up:null,doc:null,docAsOf:'',users:null};
+let raw={up:null,doc:null,docAsOf:'',users:null,ubase:null};
 let metric='over';
 let grpMode='dept';           // 'dept' = grouped (ED, FD, CD/QD…) · 'sub' = raw Description (FD CNX, FD OCC…)
 let dashMode='summary';
@@ -588,6 +652,8 @@ let selDepts=null,dfTmp=null,dfQ='';
 let detSort={k:'over',d:-1},dbSort={k:'name',d:1};
 let drillDept=null;
 let newDocState=[];
+let _dbKeys=[];                 // row index → docBase key (for inline editing)
+let udNewState=[];              // pending WM users not yet in User Base (User Detail tab)
 const MLBL={over:'Overdue documents',intime:'In-Time pending',pending:'All pending documents',overUsers:'Users with overdue'};
 const FSDS={FSDS1:3,FSDS2:7,FSDS3:7,FSDS4:30,FSDS5:30};
 const memStore={};
@@ -625,8 +691,10 @@ function groupOf(d){
 }
 function fsdsAck(t){return FSDS[t]||7}
 function guessType(name){
+  /* default FSDS suggestion only — user confirms in the dropdown before adding.
+     Order tuned to K-Mile data: IOC=3d, bulletins/AIP=7d, forms=7d, manuals/policies=30d */
   const n=nrm(name);
-  if(n.includes('safety')||n.includes('security')||n.includes('ioc'))return'FSDS1';
+  if(n.includes('ioc'))return'FSDS1';
   if(n.includes('bulletin')||n.includes('aip'))return'FSDS2';
   if(n.includes('form')||n.includes('procedure')||n.includes('checklist'))return'FSDS3';
   return'FSDS4';
@@ -655,6 +723,7 @@ async function saveAll(){
     META.savedAt=new Date().toISOString();
     stSet(SK.up,JSON.stringify(UP));
     stSet(SK.map,JSON.stringify(userMap));
+    stSet(SK.ubase,JSON.stringify(userBase));
     stSet(SK.db,JSON.stringify(docBase));
     stSet(SK.meta,JSON.stringify(META));
   }catch(e){toast('บันทึกลง storage ไม่สำเร็จ: '+e.message,true);}
@@ -663,6 +732,7 @@ async function saveDB(){try{META.savedAt=new Date().toISOString();stSet(SK.db,JS
 function loadAll(){
   try{const v=stGet(SK.up);if(v)UP=JSON.parse(v);}catch(e){}
   try{const v=stGet(SK.map);if(v)userMap={...SEED_MAP,...JSON.parse(v)};}catch(e){}
+  try{const v=stGet(SK.ubase);if(v)userBase=JSON.parse(v);}catch(e){}
   try{const v=stGet(SK.db);if(v)docBase=JSON.parse(v);}catch(e){}
   try{const v=stGet(SK.meta);if(v)META=JSON.parse(v);}catch(e){}
 }
@@ -686,7 +756,7 @@ async function exportShareHtml(){
     src='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
     renderAll();
   }
-  const payload=JSON.stringify({UP,userMap,docBase,META,savedAt:new Date().toISOString()}).replace(/<\//g,'<\\/');
+  const payload=JSON.stringify({UP,userMap,userBase,docBase,META,savedAt:new Date().toISOString()}).replace(/<\//g,'<\\/');
   const out=src.replace(/(<script id="kmileData"[^>]*>)[\s\S]*?(<\/script>)/,(m,a,b)=>a+payload+b);
   if(!/id="kmileData"[^>]*>\{/.test(out)){toast('สร้างไฟล์แชร์ไม่สำเร็จ (หา data slot ไม่เจอ)',true);return;}
   downloadBlob(new Blob([out],{type:'text/html;charset=utf-8'}),`KMile_Ack_Monitor_${META.snapshot||todayISO()}.html`);
@@ -880,6 +950,28 @@ function parseUsers(wb){
   return map;
 }
 
+function parseUserBase(wb){
+  let grid=null;
+  for(const nm of wb.names){const g=wb.grids[nm];const flat=g.slice(0,5).flat().map(nrm);
+    if(flat.some(h=>h&&String(h).includes('user name'))||flat.includes('description')){grid=g;break;}}
+  if(!grid)grid=wb.grids[wb.names[0]];
+  const hr=findHdrRow(grid,['user name / email','user name','description']);
+  const hdr=grid[hr]||[];
+  const cU=colIdx(hdr,['user name / email','user name','username','email']);
+  const cF=colIdx(hdr,['first name','firstname']);
+  const cL=colIdx(hdr,['last name','lastname']);
+  const cD=colIdx(hdr,['description','department','dept']);
+  if(cU<0||cD<0)throw new Error('ไม่พบคอลัมน์ "User Name / Email" หรือ "Description" ในไฟล์ User Base');
+  const map={};
+  for(let i=hr+1;i<grid.length;i++){
+    const r=grid[i];if(!r)continue;
+    const u=nrm(r[cU]);if(!u)continue;
+    map[u]={desc:String(r[cD]||'').trim(),
+      first:cF>=0?String(r[cF]||''):'',last:cL>=0?String(r[cL]||''):''};
+  }
+  return map;
+}
+
 /* ══════════ CORE COMPUTE (join + reconciliation) ══════════ */
 /* dbKey: normalize including comma spacing so "A,B" == "A , B" == "A, B" */
 const dbKey=s=>nrm(s).replace(/\s*,\s*/g,', ');
@@ -898,12 +990,14 @@ function rejoinTokens(toks,lookup){
   }
   return out;
 }
-function computeWith(up,map,db){
+function computeWith(up,map,db,ub){
+  ub=ub||userBase;
   const lookup=new Map();
   for(const d of Object.values(db))lookup.set(dbKey(d.name),d);
   const users=[];const newDocs=new Map();
   for(const r of up){
-    const desc=map[r.u]||'Unassigned';
+    const b=ub[r.u];
+    const desc=(b&&b.desc)||map[r.u]||'Unassigned';
     const dept=groupOf(desc);
     const docs=[];let over=0,intime=0,unknown=0;
     for(const nm of rejoinTokens(r.unread,lookup)){
@@ -1172,6 +1266,108 @@ function renderDrill(){
   $('#btnDrillPdf').onclick=()=>exportDeptPdf(drillDept);
 }
 
+/* ══════════ USER DETAIL TAB (WM ⇄ User Base cross-check) ══════════ */
+const UD_ORD={'Different':0,'Missing in User Base':1,'Not in WM':2,'Matched':3};
+const UD_PILL={'Different':'w','Missing in User Base':'e','Not in WM':'n','Matched':'ok'};
+function buildUserDetail(){
+  const upNm={};UP.forEach(r=>{upNm[r.u]=(r.first+' '+r.last).trim();});
+  const emails=[...new Set([...Object.keys(userMap),...Object.keys(userBase)])];
+  return emails.map(e=>{
+    const wm=userMap[e]||'';
+    const b=userBase[e];const bd=b?(b.desc||''):'';
+    const nm=(b&&(b.first+' '+b.last).trim())||upNm[e]||'';
+    let st;
+    if(wm&&bd){
+      if(nrm(wm)===nrm(bd))st='Matched';
+      else{
+        const isFD=groupOf(wm)==='FD'||groupOf(bd)==='FD';
+        st=isFD?'Different':'Matched';   // flag mismatches only for FD (fleet detail); other depts treated as matched
+      }
+    }
+    else if(wm&&!bd)st='Missing in User Base';
+    else st='Not in WM';
+    return{e,nm,wm,bd,eff:bd||wm||'Unassigned',st};
+  });
+}
+function renderUserDetail(){
+  const has=Object.keys(userMap).length>0||Object.keys(userBase).length>0;
+  $('#udEmpty').style.display=has?'none':'';
+  $('#udMain').style.display=has?'':'none';
+  const badge=$('#udBadge');
+  if(!has){badge.style.display='none';return;}
+  const all=buildUserDetail();
+  const nWM=all.filter(r=>r.wm).length,nUB=all.filter(r=>r.bd).length;
+  const nDiff=all.filter(r=>r.st==='Different').length;
+  const nMiss=all.filter(r=>r.st==='Missing in User Base').length;
+  const nStale=all.filter(r=>r.st==='Not in WM').length;
+  const gaps=nDiff+nMiss+nStale;
+  badge.style.display=gaps?'':'none';badge.textContent=gaps;
+  $('#udKpis').innerHTML=[
+    ['WM users (users.xlsx)',fmt(nWM),'','b'],
+    ['User Base records',fmt(nUB),'ทะเบียนกลุ่มละเอียด','b'],
+    ['Different (เฉพาะ FD)',fmt(nDiff),nDiff?'fleet จาก User Base ถูกใช้เป็นหลัก':'FD ตรงกันหมด',nDiff?'w':'ok'],
+    ['Gap (missing / stale)',fmt(nMiss+nStale),`missing in base ${fmt(nMiss)} · not in WM ${fmt(nStale)}`,(nMiss+nStale)?'e':'ok'],
+  ].map(([l,v,c,cls])=>`<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}</div><div class="c">${c}</div></div>`).join('');
+
+  /* pending users: in WM but not in User Base — editable desc, then add */
+  const prevSel=new Map(udNewState.map(d=>[d.e,d]));
+  udNewState=all.filter(r=>r.st==='Missing in User Base').map(r=>{
+    const o=prevSel.get(r.e);
+    return o?{...o,nm:r.nm,wm:r.wm}:{e:r.e,nm:r.nm,wm:r.wm,desc:r.wm||'',checked:true};
+  });
+  $('#udNewSection').style.display=udNewState.length?'':'none';
+  if(udNewState.length){
+    $('#udNewTag').textContent=`${udNewState.length} new user${udNewState.length!==1?'s':''}`;
+    const opts=[...new Set([...Object.values(userBase).map(b=>b.desc),...Object.values(userMap)])].filter(Boolean).sort();
+    $('#udDescList').innerHTML=opts.map(o=>`<option value="${esc(o)}">`).join('');
+    $('#udNewBody').innerHTML=udNewState.map((d,i)=>`<tr>
+      <td><input type="checkbox" ${d.checked?'checked':''} onchange="udNewState[${i}].checked=this.checked"></td>
+      <td style="font-family:var(--fm);font-size:10.5px;word-break:break-all">${esc(d.e)}</td>
+      <td>${esc(d.nm)||'—'}</td>
+      <td>${esc(d.wm)||'—'}</td>
+      <td><input class="inp" list="udDescList" value="${esc(d.desc)}" style="width:100%;font-size:11px;padding:4px 7px" oninput="udNewState[${i}].desc=this.value" placeholder="เช่น FD Pilot B738"></td>
+    </tr>`).join('');
+  }
+
+  let rows=all;
+  const q=nrm($('#udSearch').value);const sf=$('#udStatus').value;
+  if(sf)rows=rows.filter(r=>r.st===sf);
+  if(q)rows=rows.filter(r=>r.e.includes(q)||nrm(r.nm).includes(q)||nrm(r.wm).includes(q)||nrm(r.bd).includes(q));
+  rows=rows.slice().sort((a,b)=>(UD_ORD[a.st]-UD_ORD[b.st])||a.e.localeCompare(b.e));
+  $('#udTag').textContent=fmt(rows.length)+' rows';
+  $('#udBody').innerHTML=rows.map(r=>`<tr>
+    <td style="font-family:var(--fm);font-size:10.5px;word-break:break-all">${esc(r.e)}</td>
+    <td>${esc(r.nm)||'—'}</td>
+    <td>${esc(r.wm)||'<span style="color:var(--mu2)">—</span>'}</td>
+    <td>${esc(r.bd)||'<span style="color:var(--mu2)">—</span>'}</td>
+    <td><span class="chip">${esc(r.eff)}</span></td>
+    <td><span class="pill ${UD_PILL[r.st]}">${r.st}</span></td>
+  </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--mu);padding:18px">No match</td></tr>';
+}
+function toggleUdAll(ck){udNewState.forEach(d=>d.checked=ck);renderUserDetail();}
+async function addUdToBase(){
+  const toAdd=udNewState.filter(d=>d.checked&&d.desc.trim());
+  if(!toAdd.length){toast('เลือกรายการและกรอก Description ก่อน',true);return;}
+  const upMap={};UP.forEach(r=>{upMap[r.u]=r;});
+  toAdd.forEach(d=>{
+    const r=upMap[d.e]||{};
+    userBase[d.e]={desc:d.desc.trim(),first:r.first||'',last:r.last||''};
+  });
+  await saveAll();
+  C=compute();buildNewDocState();
+  renderAll();
+  toast(`เพิ่ม ${toAdd.length} user${toAdd.length!==1?'s':''} เข้า User Base ✓`);
+}
+function exportUdCsv(){
+  const rows=buildUserDetail().sort((a,b)=>(UD_ORD[a.st]-UD_ORD[b.st])||a.e.localeCompare(b.e));
+  if(!rows.length){toast('ยังไม่มีข้อมูล',true);return;}
+  const csv=s=>'"'+String(s??'').replace(/"/g,'""')+'"';
+  const lines=['Email,Name,WM Description,User Base Description,Effective,Status',
+    ...rows.map(r=>[r.e,r.nm,r.wm,r.bd,r.eff,r.st].map(csv).join(','))];
+  downloadBlob(new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'}),'kmile_user_crosscheck_'+todayISO()+'.csv');
+  toast('Exported user cross-check CSV ✓');
+}
+
 /* ══════════ DOCUMENT BASE TAB ══════════ */
 function buildNewDocState(){
   if(!C){newDocState=[];return;}
@@ -1200,19 +1396,20 @@ function renderDocBase(){
     <td style="font-family:var(--fm);font-size:11px;color:var(--mu)" id="ndue${i}">${d.due||'—'}</td>
   </tr>`).join('');
 
-  let rows=Object.values(docBase).map(d=>{
+  let rows=Object.entries(docBase).map(([k,d])=>{
     const due=effDue(d);
-    return{name:d.name,ack:d.ack,pub:d.pub||'',due,status:statusOf(due)};
+    return{k,name:d.name,ack:d.ack,pub:d.pub||'',due,status:statusOf(due)};
   });
   const q=nrm($('#dbSearch').value);const sf=$('#dbStatusFilter').value;
   if(q)rows=rows.filter(r=>nrm(r.name).includes(q));
   if(sf)rows=rows.filter(r=>r.status===sf);
   rows.sort((a,b)=>dbSort.d*((a[dbSort.k]>b[dbSort.k])?1:(a[dbSort.k]<b[dbSort.k])?-1:0));
+  _dbKeys=rows.map(r=>r.k);
   $('#dbCount').textContent=`${rows.length} / ${Object.keys(docBase).length} documents · as of ${META.asOf||'—'}`;
-  $('#dbBody').innerHTML=rows.map(r=>`<tr>
+  $('#dbBody').innerHTML=rows.map((r,i)=>`<tr>
     <td style="font-size:11.5px;word-break:break-word;max-width:340px">${esc(r.name)}</td>
-    <td class="r">${r.ack} days</td>
-    <td class="r">${r.pub||'—'}</td>
+    <td class="r"><input type="number" min="1" value="${Number(r.ack)||7}" style="width:54px" onchange="dbEditAck(${i},this.value)" title="แก้ Acknowledge period (days)"></td>
+    <td class="r"><input type="date" value="${r.pub}" onchange="dbEditPub(${i},this.value)" title="แก้ Published Date — Due Date คำนวณใหม่อัตโนมัติ"></td>
     <td class="r">${r.due||'—'}</td>
     <td class="r"><span class="pill ${r.status==='Over due'?'e':'ok'}">${r.status}</span></td>
   </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--mu);padding:16px">ยังไม่มีเอกสารใน Document Base — import ไฟล์หรือเพิ่มด้วยมือ</td></tr>';
@@ -1242,6 +1439,18 @@ async function addManual(){
   C=compute();buildNewDocState();renderAll();
   $('#manName').value='';$('#manPub').value='';
   toast(`"${name}" added ✓`);
+}
+async function dbEditPub(i,v){
+  const d=docBase[_dbKeys[i]];if(!d)return;
+  d.pub=v;d.due=v?addDays(v,d.ack||7):'';
+  await saveDB();C=compute();buildNewDocState();renderAll();
+  toast(`"${d.name}" → published ${v||'—'} ✓`);
+}
+async function dbEditAck(i,v){
+  const d=docBase[_dbKeys[i]];if(!d)return;
+  d.ack=Number(v)||7;if(d.pub)d.due=addDays(d.pub,d.ack);
+  await saveDB();C=compute();buildNewDocState();renderAll();
+  toast(`"${d.name}" → ack period ${d.ack} days ✓`);
 }
 function onManType(){const t=$('#manType').value;$('#manAck').value=t==='custom'?7:fsdsAck(t);}
 async function handlePdfs(files){
@@ -1488,7 +1697,7 @@ function renderMeta(){
     $('#metaSnap').textContent='—';$('#metaAsOf').textContent=META.asOf||'—';
     $('#metaUsers').textContent='—';$('#metaDocs').textContent=Object.keys(docBase).length||'—';
   }
-  $('#storedInfo').innerHTML=`<b>ข้อมูลที่เก็บอยู่ในระบบตอนนี้:</b> User Performance ${UP.length?`✓ ${UP.length} users`:'— ยังไม่มี'} · Users mapping ✓ ${Object.keys(userMap).length} รายการ · Document Base ✓ ${Object.keys(docBase).length} เอกสาร${META.asOf?` (as of ${META.asOf})`:''}${META.snapshot?` · snapshot ล่าสุด ${META.snapshot}`:''}`;
+  $('#storedInfo').innerHTML=`<b>ข้อมูลที่เก็บอยู่ในระบบตอนนี้:</b> User Performance ${UP.length?`✓ ${UP.length} users`:'— ยังไม่มี'} · Users mapping (WM) ✓ ${Object.keys(userMap).length} รายการ · User Base ✓ ${Object.keys(userBase).length} รายการ · Document Base ✓ ${Object.keys(docBase).length} เอกสาร${META.asOf?` (as of ${META.asOf})`:''}${META.snapshot?` · snapshot ล่าสุด ${META.snapshot}`:''}`;
 }
 function renderAll(){
   renderMeta();
@@ -1498,14 +1707,14 @@ function renderAll(){
   if(has){
     updateDFLabel();renderKPIs();renderChart();renderRows();
   }
-  renderDetail();renderDocBase();
+  renderDetail();renderUserDetail();renderDocBase();
 }
 
 /* ══════════ IMPORT FLOW ══════════ */
 function checkReady(){
   const willUP=raw.up||((UP.length)?UP:null);
   const willMap=raw.users?{...userMap,...raw.users}:userMap;
-  const anyNew=!!(raw.up||raw.doc||raw.users);
+  const anyNew=!!(raw.up||raw.doc||raw.users||raw.ubase);
   const ok=anyNew&&!!willUP;
   $('#btnPublish').disabled=!ok;
   if(!anyNew){$('#importPreview').style.display='none';return;}
@@ -1514,25 +1723,33 @@ function checkReady(){
     $('#importPreview').style.display='';$('#prevKpis').innerHTML='';return;
   }
   const willDB=raw.doc?mergedDB(docBase,raw.doc.docs):docBase;
-  const P=computeWith(willUP,willMap,willDB);
+  const willUB=raw.ubase?{...userBase,...raw.ubase}:userBase;
+  const P=computeWith(willUP,willMap,willDB,willUB);
   const rows=P.users.filter(u=>u.dept!=='Unassigned');
   const totalOver=rows.reduce((s,u)=>s+u.over,0);
   const depts=new Set(rows.map(u=>u.dept));
-  $('#prevNote').textContent=[raw.up?'UP: ไฟล์ใหม่':'UP: ใช้ของเดิม',raw.doc?'DocBase: merge ไฟล์ใหม่':'DocBase: ใช้ของเดิม',raw.users?'Users: ไฟล์ใหม่':'Users: ใช้ของเดิม'].join(' · ');
+  $('#prevNote').textContent=[raw.up?'UP: ไฟล์ใหม่':'UP: ใช้ของเดิม',raw.doc?'DocBase: merge ไฟล์ใหม่':'DocBase: ใช้ของเดิม',raw.users?'Users: ไฟล์ใหม่':'Users: ใช้ของเดิม',raw.ubase?'UserBase: ไฟล์ใหม่':'UserBase: ใช้ของเดิม'].join(' · ');
   $('#prevKpis').innerHTML=[
     ['Users',fmt(willUP.length),''],
     ['Overdue docs',fmt(totalOver),'คำนวณจริงหลัง join'],
     ['Departments',fmt(depts.size),'ไม่รวม Unassigned'],
     ['Doc Base',fmt(Object.keys(willDB).length),raw.doc&&raw.doc.asOf?('as of '+raw.doc.asOf):''],
     ['New docs',fmt(P.newDocs.length),P.newDocs.length?'ต้องเพิ่มข้อมูล':'ครบถ้วน'],
+    ['User Base',fmt(Object.keys(willUB).length),'ทะเบียนกลุ่มละเอียด'],
   ].map(([l,v,c])=>`<div class="kpi"><div class="l">${l}</div><div class="v" style="font-size:20px">${v}</div><div class="c">${c}</div></div>`).join('');
   $('#importPreview').style.display='';
 }
 function mergedDB(base,add){
+  /* imported file is the source of truth: values it provides overwrite the stored copy
+     (docs missing from the file are kept, nothing is deleted) */
   const out={};for(const[k,v]of Object.entries(base))out[k]={...v};
   for(const[k,v]of Object.entries(add)){
     if(!out[k])out[k]={...v};
-    else{const e=out[k];if(!e.pub&&v.pub)e.pub=v.pub;if(!e.due&&v.due)e.due=v.due;if(!e.ack&&v.ack)e.ack=v.ack;}
+    else{const e=out[k];
+      if(v.pub)e.pub=v.pub;
+      if(v.ack)e.ack=v.ack;
+      e.due=e.pub?addDays(e.pub,e.ack||7):(v.due||e.due||'');
+    }
   }
   return out;
 }
@@ -1544,7 +1761,8 @@ async function handleImport(n,file){
     const wb=await readWorkbook(file);
     if(n===1){raw.up=parseUP(wb);st.innerHTML=`✓ <b>User Performance</b> — ${raw.up.length} users`;}
     else if(n===2){const r=parseDocBase(wb);raw.doc=r;st.innerHTML=`✓ <b>Document Base</b> — ${Object.keys(r.docs).length} docs${r.asOf?` · as of ${r.asOf}`:''}`;}
-    else{raw.users=parseUsers(wb);st.innerHTML=`✓ <b>Users</b> — ${Object.keys(raw.users).length} mapped`;}
+    else if(n===3){raw.users=parseUsers(wb);st.innerHTML=`✓ <b>Users</b> — ${Object.keys(raw.users).length} mapped`;}
+    else{raw.ubase=parseUserBase(wb);st.innerHTML=`✓ <b>User Base</b> — ${Object.keys(raw.ubase).length} users (fleet / sub-dept detail)`;}
     st.style.display='';toast('อ่าน '+file.name+' สำเร็จ ✓');checkReady();
   }catch(e){
     st.className='callout e';st.innerHTML='✗ '+esc(e.message);st.style.display='';
@@ -1554,13 +1772,14 @@ async function handleImport(n,file){
 async function publish(){
   try{
     if(raw.users)userMap={...userMap,...raw.users};
+    if(raw.ubase)userBase={...userBase,...raw.ubase};
     if(raw.doc){docBase=mergedDB(docBase,raw.doc.docs);if(raw.doc.asOf)META.asOf=raw.doc.asOf;}
     if(raw.up)UP=raw.up;
     META.snapshot=$('#snapDate').value||todayISO();
     await saveAll();
     C=compute();buildNewDocState();
-    raw={up:null,doc:null,docAsOf:'',users:null};
-    [1,2,3].forEach(n=>$('#st'+n).style.display='none');
+    raw={up:null,doc:null,docAsOf:'',users:null,ubase:null};
+    [1,2,3,4].forEach(n=>$('#st'+n).style.display='none');
     $('#importPreview').style.display='none';$('#btnPublish').disabled=true;
     renderAll();go('dash');
     toast(`Published ✓ ${UP.length} users · ${Object.keys(docBase).length} docs in base`);
@@ -1605,6 +1824,7 @@ $('#dfSearch').oninput=e=>{dfQ=e.target.value;renderDFList();};
 document.addEventListener('click',e=>{if($('#dfWrap')&&!$('#dfWrap').contains(e.target))closeDeptFilter();});
 $('#rowSearch').oninput=renderRows;$('#rowStatus').onchange=renderRows;
 $('#detSearch').oninput=renderDetail;
+$('#udSearch').oninput=renderUserDetail;$('#udStatus').onchange=renderUserDetail;$('#btnUdCsv').onclick=exportUdCsv;$('#btnUdAdd').onclick=addUdToBase;
 $('#dbSearch').oninput=renderDocBase;$('#dbStatusFilter').onchange=renderDocBase;
 $('#btnAddNew').onclick=addNewDocs;
 $('#btnManAdd').onclick=addManual;
@@ -1613,7 +1833,7 @@ $('#btnExDbXlsx').onclick=exportDocBaseXlsx;
 $('#btnExChart').onclick=exportChart;
 $('#btnExBoard').onclick=exportBoard;
 $('#btnExCsv').onclick=exportCsv;
-[1,2,3].forEach(n=>{
+[1,2,3,4].forEach(n=>{
   const drop=$('#drop'+n),fi=$('#fi'+n);
   drop.onclick=()=>fi.click();
   fi.onchange=e=>{if(e.target.files[0])handleImport(n,e.target.files[0]);fi.value='';};
@@ -1622,7 +1842,7 @@ $('#btnExCsv').onclick=exportCsv;
   drop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleImport(n,e.dataTransfer.files[0]);});
 });
 $('#btnPublish').onclick=publish;
-$('#btnClearImport').onclick=()=>{raw={up:null,doc:null,docAsOf:'',users:null};[1,2,3].forEach(n=>$('#st'+n).style.display='none');$('#importPreview').style.display='none';$('#btnPublish').disabled=true;};
+$('#btnClearImport').onclick=()=>{raw={up:null,doc:null,docAsOf:'',users:null,ubase:null};[1,2,3,4].forEach(n=>$('#st'+n).style.display='none');$('#importPreview').style.display='none';$('#btnPublish').disabled=true;};
 $('#snapDate').value=todayISO();
 
 $('#btnShareHtml').onclick=exportShareHtml;
@@ -1635,7 +1855,7 @@ $('#btnShareHtml').onclick=exportShareHtml;
   syncGrpSeg();
   const emb=readEmbedded();
   if(emb&&(!UP.length||(emb.savedAt||'')>(META.savedAt||''))){
-    UP=emb.UP;userMap={...SEED_MAP,...(emb.userMap||{})};docBase=emb.docBase||{};
+    UP=emb.UP;userMap={...SEED_MAP,...(emb.userMap||{})};userBase=emb.userBase||{};docBase=emb.docBase||{};
     META={...(emb.META||{}),savedAt:emb.savedAt||''};
     if(storageOK)await saveAll();
     $('#embedInfo').style.display='';
