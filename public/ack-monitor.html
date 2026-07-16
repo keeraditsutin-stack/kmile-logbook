@@ -352,6 +352,7 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
       <div class="seg" id="grpSeg2"><button class="on" data-g="dept">Department</button><button data-g="sub">Sub-dept</button><button data-g="mix">Mixed</button></div>
       <div class="sp"></div>
       <button class="btn" id="btnExCsv">Export CSV</button>
+      <button class="btn p" id="btnExSelPdf">Export selected PDF</button>
     </div>
     <div class="tbl-wrap"><table class="dt" id="detTable"><thead></thead><tbody></tbody></table></div>
     <div class="deptcard" id="deptDrill" style="display:none">
@@ -431,6 +432,7 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
         <h3 style="color:var(--warn)">⚠ เอกสารใหม่จาก User Performance (ยังไม่มีใน Document Base)</h3>
         <div class="sp"></div>
         <span class="tag" id="newDocTag"></span>
+        <button class="btn g" id="btnRestoreIgn" style="display:none;font-size:11px;color:var(--mu)"></button>
         <label class="btn" style="cursor:pointer;font-size:11.5px">
           Upload PDF (auto-fill date)
           <input type="file" id="pdfInput" accept=".pdf" multiple hidden>
@@ -443,9 +445,9 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
           <table class="dbt">
             <thead><tr>
               <th><input type="checkbox" id="chkNewAll" onchange="toggleNewAll(this.checked)"></th>
-              <th style="min-width:260px">Document Name</th>
+              <th style="min-width:260px">Document Name (แก้ไขได้)</th>
               <th class="r">Users</th>
-              <th>FSDS Type</th><th class="r">Ack Period</th><th>Published Date</th><th>Due Date</th>
+              <th>FSDS Type</th><th class="r">Ack Period</th><th>Published Date</th><th>Due Date</th><th></th>
             </tr></thead>
             <tbody id="newDocBody"></tbody>
           </table>
@@ -658,7 +660,7 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
 const SEED_MAP={}; /* department map is populated by importing users.xlsx (employee emails stripped from the public-hosted copy) */
 
 /* ══════════ STATE ══════════ */
-const SK={up:'kmile_ack_up',map:'kmile_ack_map',db:'kmile_ack_db',meta:'kmile_ack_meta',pref:'kmile_ack_pref',ubase:'kmile_ack_ubase'};
+const SK={up:'kmile_ack_up',map:'kmile_ack_map',db:'kmile_ack_db',meta:'kmile_ack_meta',pref:'kmile_ack_pref',ubase:'kmile_ack_ubase',ign:'kmile_ack_ign'};
 let UP=[];                    // [{u,first,last,updates,reminders,unread:[]}]
 let userMap={...SEED_MAP};    // email → Description (WM users.xlsx)
 let userBase={};              // email → {desc,first,last} — curated User Base (fleet detail), overrides userMap
@@ -675,6 +677,9 @@ let drillDept=null;
 let newDocState=[];
 let _dbKeys=[];                 // row index → docBase key (for inline editing)
 let udNewState=[];              // pending WM users not yet in User Base (User Detail tab)
+let ignoredDocs={};             // dbKey(name) → name — new docs the user dismissed from the pending panel
+let detSel=new Set();           // Department Detail: groups selected for combined PDF export
+let _detKeys=[];                // row index → group key in Department Detail table
 const MLBL={over:'Overdue documents',intime:'In-Time pending',pending:'All pending documents',overUsers:'Users with overdue'};
 const FSDS={FSDS1:3,FSDS2:7,FSDS3:7,FSDS4:30,FSDS5:30};
 const memStore={};
@@ -745,6 +750,7 @@ async function saveAll(){
     stSet(SK.up,JSON.stringify(UP));
     stSet(SK.map,JSON.stringify(userMap));
     stSet(SK.ubase,JSON.stringify(userBase));
+    stSet(SK.ign,JSON.stringify(ignoredDocs));
     stSet(SK.db,JSON.stringify(docBase));
     stSet(SK.meta,JSON.stringify(META));
   }catch(e){toast('บันทึกลง storage ไม่สำเร็จ: '+e.message,true);}
@@ -754,6 +760,7 @@ function loadAll(){
   try{const v=stGet(SK.up);if(v)UP=JSON.parse(v);}catch(e){}
   try{const v=stGet(SK.map);if(v)userMap={...SEED_MAP,...JSON.parse(v)};}catch(e){}
   try{const v=stGet(SK.ubase);if(v)userBase=JSON.parse(v);}catch(e){}
+  try{const v=stGet(SK.ign);if(v)ignoredDocs=JSON.parse(v);}catch(e){}
   try{const v=stGet(SK.db);if(v)docBase=JSON.parse(v);}catch(e){}
   try{const v=stGet(SK.meta);if(v)META=JSON.parse(v);}catch(e){}
 }
@@ -777,7 +784,7 @@ async function exportShareHtml(){
     src='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
     renderAll();
   }
-  const payload=JSON.stringify({UP,userMap,userBase,docBase,META,savedAt:new Date().toISOString()}).replace(/<\//g,'<\\/');
+  const payload=JSON.stringify({UP,userMap,userBase,docBase,ignoredDocs,META,savedAt:new Date().toISOString()}).replace(/<\//g,'<\\/');
   const out=src.replace(/(<script id="kmileData"[^>]*>)[\s\S]*?(<\/script>)/,(m,a,b)=>a+payload+b);
   if(!/id="kmileData"[^>]*>\{/.test(out)){toast('สร้างไฟล์แชร์ไม่สำเร็จ (หา data slot ไม่เจอ)',true);return;}
   downloadBlob(new Blob([out],{type:'text/html;charset=utf-8'}),`KMile_Ack_Monitor_${META.snapshot||todayISO()}.html`);
@@ -1050,7 +1057,7 @@ function loadPref(){try{const v=stGet(SK.pref);if(!v)return;const p=JSON.parse(v
 function syncGrpSeg(){$$('#grpSeg button,#grpSeg2 button').forEach(b=>b.classList.toggle('on',b.dataset.g===grpMode));}
 function setGrpMode(g){if(g===grpMode)return;
   const sameKeys=(g!=='dept')&&(grpMode!=='dept');   // sub ⇄ mix share keys
-  grpMode=g;if(!sameKeys){selDepts=null;}dfTmp=null;drillDept=null;
+  grpMode=g;if(!sameKeys){selDepts=null;detSel=new Set();}dfTmp=null;drillDept=null;
   syncGrpSeg();updateDFLabel();savePref();renderAll();}
 function aggDepts(filter){
   if(!C)return[];
@@ -1240,8 +1247,10 @@ function renderDetail(){
     ?[['parent','Department',0],['dept','Sub-department',0],['people','People',1],['overUsers','Users w/ overdue',1],['over','Overdue docs',1],['intime','In-Time',1],['unknown','Unknown',1],['_pdf','PDF',1]]
     :[['dept','Department',0],['people','People',1],['overUsers','Users w/ overdue',1],['over','Overdue docs',1],['intime','In-Time',1],['unknown','Unknown',1],['_pdf','PDF',1]];
   const tb=$('#detTable');
-  tb.querySelector('thead').innerHTML='<tr>'+cols.map(c=>`<th class="${c[2]?'r':''}" ${c[0]!=='_pdf'?`data-k="${c[0]}"`:''}>${c[1]}${detSort.k===c[0]?(detSort.d<0?' ▾':' ▴'):''}</th>`).join('')+'</tr>';
-  tb.querySelector('tbody').innerHTML=agg.map(a=>`<tr style="cursor:pointer" onclick="openDrill(${JSON.stringify(a.dept).replace(/"/g,'&quot;')})">
+  tb.querySelector('thead').innerHTML='<tr><th style="width:30px"><input type="checkbox" id="chkDetAll" onclick="event.stopPropagation()" onchange="detSelAll(this.checked)"></th>'+cols.map(c=>`<th class="${c[2]?'r':''}" ${c[0]!=='_pdf'?`data-k="${c[0]}"`:''}>${c[1]}${detSort.k===c[0]?(detSort.d<0?' ▾':' ▴'):''}</th>`).join('')+'</tr>';
+  _detKeys=agg.map(a=>a.dept);
+  tb.querySelector('tbody').innerHTML=agg.map((a,i)=>`<tr style="cursor:pointer" onclick="openDrill(${JSON.stringify(a.dept).replace(/"/g,'&quot;')})">
+    <td onclick="event.stopPropagation()"><input type="checkbox" ${detSel.has(a.dept)?'checked':''} onchange="detToggle(${i},this.checked)"></td>
     ${grpMode==='sub'?`<td><span class="chip" style="color:var(--mu);font-weight:500">${esc(a.parent)}</span></td>`:''}
     <td><span class="chip">${esc(a.dept)}</span></td>
     <td class="r">${fmt(a.people)}</td>
@@ -1250,10 +1259,19 @@ function renderDetail(){
     <td class="r">${fmt(a.intime)}</td>
     <td class="r">${a.unknown?`<span class="pill n">${fmt(a.unknown)}</span>`:'0'}</td>
     <td class="r"><button class="btn" style="padding:3px 9px;font-size:11px" onclick="event.stopPropagation();exportDeptPdf(${JSON.stringify(a.dept).replace(/"/g,'&quot;')})">PDF</button></td>
-  </tr>`).join('')||`<tr><td colspan="${cols.length}" style="text-align:center;color:var(--mu);padding:18px">No match</td></tr>`;
+  </tr>`).join('')||`<tr><td colspan="${cols.length+1}" style="text-align:center;color:var(--mu);padding:18px">No match</td></tr>`;
   tb.querySelectorAll('thead th[data-k]').forEach(th=>th.onclick=()=>{
     const k=th.dataset.k;if(detSort.k===k)detSort.d*=-1;else{detSort.k=k;detSort.d=k==='dept'?1:-1;}renderDetail();});
+  updateDetSelUI();
   renderDrill();
+}
+function detToggle(i,ck){const k=_detKeys[i];if(!k)return;if(ck)detSel.add(k);else detSel.delete(k);updateDetSelUI();}
+function detSelAll(ck){_detKeys.forEach(k=>{if(ck)detSel.add(k);else detSel.delete(k);});renderDetail();}
+function updateDetSelUI(){
+  const b=$('#btnExSelPdf');
+  if(b)b.textContent='Export selected PDF'+(detSel.size?` (${detSel.size})`:'');
+  const ca=$('#chkDetAll');
+  if(ca)ca.checked=_detKeys.length>0&&_detKeys.every(k=>detSel.has(k));
 }
 function openDrill(dept){drillDept=dept;go('detail');renderDrill();
   setTimeout(()=>$('#deptDrill').scrollIntoView({behavior:'smooth',block:'start'}),60);}
@@ -1392,22 +1410,36 @@ function exportUdCsv(){
 /* ══════════ DOCUMENT BASE TAB ══════════ */
 function buildNewDocState(){
   if(!C){newDocState=[];return;}
-  const prev=new Map(newDocState.map(d=>[nrm(d.name),d]));
-  newDocState=C.newDocs.map(n=>{
+  const prev=new Map(newDocState.map(d=>[nrm(d.orig||d.name),d]));
+  newDocState=C.newDocs.filter(n=>!ignoredDocs[dbKey(n.name)]).map(n=>{
     const old=prev.get(nrm(n.name));
     if(old)return{...old,users:n.users};
     const t=guessType(n.name);
-    return{name:n.name,users:n.users,type:t,ack:fsdsAck(t),pub:'',due:'',checked:true};
+    return{orig:n.name,name:n.name,users:n.users,type:t,ack:fsdsAck(t),pub:'',due:'',checked:true};
   });
+}
+async function saveIgn(){try{stSet(SK.ign,JSON.stringify(ignoredDocs));}catch(e){}}
+async function ignoreNewDoc(i){
+  const d=newDocState[i];if(!d)return;
+  const key=d.orig||d.name;
+  ignoredDocs[dbKey(key)]=key;
+  await saveIgn();buildNewDocState();renderDocBase();
+  toast(`ซ่อน "${key.length>40?key.slice(0,39)+'…':key}" แล้ว`);
+}
+async function restoreIgnored(){
+  ignoredDocs={};await saveIgn();buildNewDocState();renderDocBase();
+  toast('กู้คืนรายการที่ซ่อนไว้ทั้งหมดแล้ว ✓');
 }
 function renderDocBase(){
   const nd=newDocState;
-  $('#newDocSection').style.display=nd.length?'':'none';
+  const ignN=Object.keys(ignoredDocs).length;
+  $('#newDocSection').style.display=(nd.length||ignN)?'':'none';
+  const rb=$('#btnRestoreIgn');rb.style.display=ignN?'':'none';rb.textContent=`กู้คืนที่ซ่อน (${ignN})`;
   const badge=$('#newBadge');badge.style.display=nd.length?'':'none';badge.textContent=nd.length;
   $('#newDocTag').textContent=`${nd.length} new document${nd.length!==1?'s':''}`;
   $('#newDocBody').innerHTML=nd.map((d,i)=>`<tr>
     <td><input type="checkbox" ${d.checked?'checked':''} onchange="newDocState[${i}].checked=this.checked"></td>
-    <td style="font-size:11.5px;word-break:break-word">${esc(d.name)}</td>
+    <td><input class="inp" style="width:100%;min-width:240px;font-size:11px;padding:4px 7px" value="${esc(d.name)}" oninput="newDocState[${i}].name=this.value" title="แก้ชื่อเอกสารได้ก่อนกด Add — พิมพ์ชื่อเต็มให้ตรงต้นฉบับ ระบบจะจับคู่ชิ้นส่วนชื่อที่โดน comma ตัดให้เอง"></td>
     <td class="r">${fmt(d.users)}</td>
     <td><select onchange="onNewType(${i},this.value)">
       ${['FSDS1','FSDS2','FSDS3','FSDS4','FSDS5'].map(t=>`<option value="${t}"${t===d.type?' selected':''}>${t}</option>`).join('')}
@@ -1415,6 +1447,7 @@ function renderDocBase(){
     <td class="r" id="nack${i}">${d.ack}d</td>
     <td><input type="date" value="${d.pub}" onchange="onNewPub(${i},this.value)"></td>
     <td style="font-family:var(--fm);font-size:11px;color:var(--mu)" id="ndue${i}">${d.due||'—'}</td>
+    <td class="r"><button class="btn g" style="padding:2px 8px;font-size:11.5px;color:var(--err)" onclick="ignoreNewDoc(${i})" title="ลบออกจากรายการ (ไม่ต้องเพิ่มเข้า Document Base)">✕</button></td>
   </tr>`).join('');
 
   let rows=Object.entries(docBase).map(([k,d])=>{
@@ -1564,23 +1597,28 @@ function exportDocBaseXlsx(){
 }
 
 /* ══════════ EXPORT — Dept PDF (HTML download, auto print) ══════════ */
-function exportDeptPdf(dept){
+function exportDeptPdf(dept){exportDeptsPdf([dept]);}
+function exportDeptsPdf(depts){
   if(!C){toast('No data',true);return;}
+  depts=[...new Set((depts||[]).filter(Boolean))];
+  if(!depts.length){toast('ติ๊กเลือกกลุ่มที่จะ export ในตารางก่อน',true);return;}
   const today=todayISO();
-  const inScope=u=>u.dept!=='Unassigned'&&(keyOf(u)===dept||(grpMode==='sub'&&u.dept===dept));
-  const scoped=C.users.filter(inScope);
   const fmtUS=iso=>{if(!iso)return'';const p=iso.split('-');return(+p[1])+'/'+(+p[2])+'/'+p[0];};
   const rows=[];
-  scoped.forEach(u=>{
-    const nm=(u.first+' '+u.last).trim();
-    u.docs.forEach(d=>{
-      if(d.status!=='Over due')return;
-      rows.push({u:u.u,nm,doc:d.name,pub:fmtUS(d.pub),ack:d.ack!==''&&d.ack!=null?d.ack:'',due:fmtUS(d.due)});
+  for(const dept of depts){
+    const inScope=u=>u.dept!=='Unassigned'&&(keyOf(u)===dept||(grpMode==='sub'&&u.dept===dept));
+    C.users.filter(inScope).forEach(u=>{
+      const nm=(u.first+' '+u.last).trim();
+      u.docs.forEach(d=>{
+        if(d.status!=='Over due')return;
+        rows.push({dept,u:u.u,nm,doc:d.name,pub:fmtUS(d.pub),ack:d.ack!==''&&d.ack!=null?d.ack:'',due:fmtUS(d.due)});
+      });
     });
-  });
-  if(!rows.length){toast('ไม่มีเอกสาร Over due ในแผนก '+dept,true);return;}
-  rows.sort((a,b)=>a.nm.localeCompare(b.nm)||a.u.localeCompare(b.u)||String(a.due).localeCompare(String(b.due)));
-  const title=`Details for Count of Invalid period - Department: ${esc(dept)}, Invalid period: Over due`;
+  }
+  if(!rows.length){toast('ไม่มีเอกสาร Over due ในกลุ่มที่เลือก',true);return;}
+  rows.sort((a,b)=>a.dept.localeCompare(b.dept)||a.nm.localeCompare(b.nm)||a.u.localeCompare(b.u)||String(a.due).localeCompare(String(b.due)));
+  const deptLabel=depts.join(', ');
+  const title=`Details for Count of Invalid period - Department: ${esc(deptLabel)}, Invalid period: Over due`;
   const html=`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
 <title>${title}</title>
 <style>
@@ -1607,26 +1645,29 @@ tr{page-break-inside:avoid}
 <div class="pg">
 <h1>${title}</h1>
 <table>
-<colgroup><col style="width:14%"><col style="width:10%"><col style="width:7%"><col style="width:35%"><col style="width:8%"><col style="width:9%"><col style="width:8%"><col style="width:9%"></colgroup>
+<colgroup><col style="width:13%"><col style="width:9%"><col style="width:10%"><col style="width:32%"><col style="width:8%"><col style="width:9%"><col style="width:8%"><col style="width:8%"></colgroup>
 <thead><tr><th>Username</th><th>Name</th><th>Department</th><th>Document</th><th>Published Date</th><th>Acknowledge period</th><th>Due Date</th><th>Invalid period</th></tr></thead>
 <tbody>${rows.map(r=>`<tr>
 <td style="word-break:break-all">${esc(r.u)}</td>
 <td>${esc(r.nm)||'—'}</td>
-<td>${esc(dept)}</td>
+<td>${esc(r.dept)}</td>
 <td>${esc(r.doc)}</td>
 <td class="mo">${r.pub||'—'}</td>
 <td class="mo" style="text-align:center">${r.ack}</td>
 <td class="mo">${r.due||'—'}</td>
 <td style="color:#dc2626;font-weight:600">Over due</td>
 </tr>`).join('')}</tbody>
-<tfoot><tr><td colspan="7">Total Over due documents</td><td>${fmt(rows.length)}</td></tr></tfoot>
+<tfoot><tr><td colspan="7">Total Over due documents${depts.length>1?` (${depts.length} groups)`:''}</td><td>${fmt(rows.length)}</td></tr></tfoot>
 </table>
 <div class="meta"><span>K-Mile Air Co., Ltd. · Compliance Monitoring · Snapshot: ${META.snapshot||today} · Status as of: ${today}</span><span>Generated ${new Date().toLocaleString('en-GB')}</span></div>
 </div>
 <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});<\/script>
 </body></html>`;
-  downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),`KMile_Overdue_${dept.replace(/[^a-zA-Z0-9\-]/g,'_')}_${today}.html`);
-  toast(`ดาวน์โหลดรายงานแผนก ${dept} แล้ว — เปิดไฟล์จะขึ้นหน้า Print/Save PDF อัตโนมัติ`);
+  const fname=depts.length>1
+    ?`KMile_Overdue_Selected_${depts.length}groups_${today}.html`
+    :`KMile_Overdue_${depts[0].replace(/[^a-zA-Z0-9\-]/g,'_')}_${today}.html`;
+  downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),fname);
+  toast(depts.length>1?`ดาวน์โหลดรายงานรวม ${depts.length} กลุ่มแล้ว — เปิดไฟล์จะขึ้นหน้า Print/Save PDF อัตโนมัติ`:`ดาวน์โหลดรายงานแผนก ${depts[0]} แล้ว — เปิดไฟล์จะขึ้นหน้า Print/Save PDF อัตโนมัติ`);
 }
 
 /* ══════════ EXPORT — CSV / PNG ══════════ */
@@ -1855,12 +1896,14 @@ $('#detSearch').oninput=renderDetail;
 $('#udSearch').oninput=renderUserDetail;$('#udStatus').onchange=renderUserDetail;$('#btnUdCsv').onclick=exportUdCsv;$('#btnUdAdd').onclick=addUdToBase;
 $('#dbSearch').oninput=renderDocBase;$('#dbStatusFilter').onchange=renderDocBase;
 $('#btnAddNew').onclick=addNewDocs;
+$('#btnRestoreIgn').onclick=restoreIgnored;
 $('#btnManAdd').onclick=addManual;
 $('#pdfInput').onchange=e=>{if(e.target.files.length)handlePdfs([...e.target.files]);e.target.value='';};
 $('#btnExDbXlsx').onclick=exportDocBaseXlsx;
 $('#btnExChart').onclick=exportChart;
 $('#btnExBoard').onclick=exportBoard;
 $('#btnExCsv').onclick=exportCsv;
+$('#btnExSelPdf').onclick=()=>exportDeptsPdf([...detSel]);
 [1,2,3,4].forEach(n=>{
   const drop=$('#drop'+n),fi=$('#fi'+n);
   drop.onclick=()=>fi.click();
@@ -1879,7 +1922,7 @@ $('#btnClearImport').onclick=()=>{
 $('#btnWipeAll').onclick=async()=>{
   if(!confirm('ล้างข้อมูลทั้งหมดที่เก็บในเครื่องนี้?\n(User Performance / Users / User Base / Document Base / การตั้งค่า จะหายทั้งหมด)'))return;
   UP=[];userMap={...SEED_MAP};userBase={};docBase={};META={snapshot:'',asOf:''};
-  newDocState=[];udNewState=[];_dbKeys=[];selDepts=null;dfTmp=null;drillDept=null;
+  newDocState=[];udNewState=[];_dbKeys=[];ignoredDocs={};detSel=new Set();selDepts=null;dfTmp=null;drillDept=null;
   Object.values(SK).forEach(k=>{if(storageOK){try{localStorage.removeItem(k);}catch(e){}}delete memStore[k];});
   raw={up:null,doc:null,docAsOf:'',users:null,ubase:null};
   [1,2,3,4].forEach(n=>{const st=$('#st'+n);st.style.display='none';st.innerHTML='';});
@@ -1899,7 +1942,7 @@ $('#btnShareHtml').onclick=exportShareHtml;
   syncGrpSeg();
   const emb=readEmbedded();
   if(emb&&(!UP.length||(emb.savedAt||'')>(META.savedAt||''))){
-    UP=emb.UP;userMap={...SEED_MAP,...(emb.userMap||{})};userBase=emb.userBase||{};docBase=emb.docBase||{};
+    UP=emb.UP;userMap={...SEED_MAP,...(emb.userMap||{})};userBase=emb.userBase||{};docBase=emb.docBase||{};ignoredDocs=emb.ignoredDocs||{};
     META={...(emb.META||{}),savedAt:emb.savedAt||''};
     if(storageOK)await saveAll();
     $('#embedInfo').style.display='';
