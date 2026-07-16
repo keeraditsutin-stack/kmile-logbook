@@ -1441,10 +1441,11 @@ function renderDocBase(){
     <td><input type="checkbox" ${d.checked?'checked':''} onchange="newDocState[${i}].checked=this.checked"></td>
     <td><input class="inp" style="width:100%;min-width:240px;font-size:11px;padding:4px 7px" value="${esc(d.name)}" oninput="newDocState[${i}].name=this.value" title="แก้ชื่อเอกสารได้ก่อนกด Add — พิมพ์ชื่อเต็มให้ตรงต้นฉบับ ระบบจะจับคู่ชิ้นส่วนชื่อที่โดน comma ตัดให้เอง"></td>
     <td class="r">${fmt(d.users)}</td>
-    <td><select onchange="onNewType(${i},this.value)">
+    <td><select id="ntype${i}" onchange="onNewType(${i},this.value)">
       ${['FSDS1','FSDS2','FSDS3','FSDS4','FSDS5'].map(t=>`<option value="${t}"${t===d.type?' selected':''}>${t}</option>`).join('')}
+      <option value="custom"${d.type==='custom'?' selected':''}>Custom</option>
     </select></td>
-    <td class="r" id="nack${i}">${d.ack}d</td>
+    <td class="r"><input type="number" min="1" id="nack${i}" value="${Number(d.ack)||7}" style="width:54px" onchange="onNewAck(${i},this.value)" title="แก้ Ack period ได้โดยตรง (เอกสารที่มี period เฉพาะตัว) — จะสลับ Type เป็น Custom ให้"></td>
     <td><input type="date" value="${d.pub}" onchange="onNewPub(${i},this.value)"></td>
     <td style="font-family:var(--fm);font-size:11px;color:var(--mu)" id="ndue${i}">${d.due||'—'}</td>
     <td class="r"><button class="btn g" style="padding:2px 8px;font-size:11.5px;color:var(--err)" onclick="ignoreNewDoc(${i})" title="ลบออกจากรายการ (ไม่ต้องเพิ่มเข้า Document Base)">✕</button></td>
@@ -1470,13 +1471,23 @@ function renderDocBase(){
   $$('#tab-docbase table.dbt thead th[data-k]').forEach(th=>th.onclick=()=>{
     const k=th.dataset.k;if(dbSort.k===k)dbSort.d*=-1;else{dbSort.k=k;dbSort.d=k==='name'?1:-1;}renderDocBase();});
 }
-function onNewType(i,t){newDocState[i].type=t;newDocState[i].ack=fsdsAck(t);$('#nack'+i).textContent=fsdsAck(t)+'d';onNewPub(i,newDocState[i].pub);}
+function onNewType(i,t){
+  const d=newDocState[i];d.type=t;
+  if(t!=='custom'){d.ack=fsdsAck(t);const el=$('#nack'+i);if(el)el.value=d.ack;}
+  onNewPub(i,d.pub);
+}
+function onNewAck(i,v){
+  const d=newDocState[i];d.ack=Math.max(1,Number(v)||7);d.type='custom';
+  const sel=$('#ntype'+i);if(sel)sel.value='custom';
+  const el=$('#nack'+i);if(el)el.value=d.ack;
+  onNewPub(i,d.pub);
+}
 function onNewPub(i,v){newDocState[i].pub=v;const due=v?addDays(v,newDocState[i].ack):'';newDocState[i].due=due;$('#ndue'+i).textContent=due||'—';}
 function toggleNewAll(checked){newDocState.forEach(d=>d.checked=checked);renderDocBase();}
 async function addNewDocs(){
   const toAdd=newDocState.filter(d=>d.checked&&d.pub);
   if(!toAdd.length){toast('กรอก Published Date ของรายการที่เลือกก่อน',true);return;}
-  toAdd.forEach(d=>{docBase[nrm(d.name)]={name:d.name,ack:d.ack,pub:d.pub,due:addDays(d.pub,d.ack),fsds:d.type};});
+  toAdd.forEach(d=>{docBase[nrm(d.name)]={name:d.name,ack:d.ack,pub:d.pub,due:addDays(d.pub,d.ack),fsds:d.type==='custom'?'':d.type};});
   await saveDB();
   C=compute();buildNewDocState();
   renderAll();
