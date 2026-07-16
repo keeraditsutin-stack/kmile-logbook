@@ -551,7 +551,8 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
     <label style="font-size:11px;color:var(--mu);font-weight:500" for="snapDate">Snapshot date</label>
     <input type="date" class="inp" id="snapDate">
     <div class="sp"></div>
-    <button class="btn g" id="btnClearImport">Clear</button>
+    <button class="btn g" id="btnClearImport">Clear ไฟล์ที่เลือก</button>
+    <button class="btn g" id="btnWipeAll" style="color:var(--err)" title="ลบข้อมูลทุกอย่างที่บันทึกไว้ในเบราว์เซอร์เครื่องนี้">ล้างข้อมูลทั้งหมด</button>
     <button class="btn p" id="btnPublish" disabled>Process &amp; Publish →</button>
   </div>
 
@@ -1773,16 +1774,23 @@ function mergedDB(base,add){
   }
   return out;
 }
+function clearSlot(n){
+  if(n===1)raw.up=null;else if(n===2)raw.doc=null;else if(n===3)raw.users=null;else raw.ubase=null;
+  const st=$('#st'+n);st.style.display='none';st.innerHTML='';
+  checkReady();
+  toast('เอาไฟล์ออกจากช่องที่ '+n+' แล้ว');
+}
 async function handleImport(n,file){
   const st=$('#st'+n);
   st.className='callout ok';
   try{
     toast('กำลังอ่าน '+file.name+'…');
     const wb=await readWorkbook(file);
-    if(n===1){raw.up=parseUP(wb);st.innerHTML=`✓ <b>User Performance</b> — ${raw.up.length} users`;}
-    else if(n===2){const r=parseDocBase(wb);raw.doc=r;st.innerHTML=`✓ <b>Document Base</b> — ${Object.keys(r.docs).length} docs${r.asOf?` · as of ${r.asOf}`:''}`;}
-    else if(n===3){raw.users=parseUsers(wb);st.innerHTML=`✓ <b>Users</b> — ${Object.keys(raw.users).length} mapped`;}
-    else{raw.ubase=parseUserBase(wb);st.innerHTML=`✓ <b>User Base</b> — ${Object.keys(raw.ubase).length} users (fleet / sub-dept detail)`;}
+    const RMV=`<button class="btn g" style="padding:1px 7px;font-size:10.5px;margin-left:6px;color:var(--err)" onclick="clearSlot(${n})" title="เอาไฟล์นี้ออก">✕ เอาออก</button>`;
+    if(n===1){raw.up=parseUP(wb);st.innerHTML=`✓ <b>User Performance</b> — ${raw.up.length} users ${RMV}`;}
+    else if(n===2){const r=parseDocBase(wb);raw.doc=r;st.innerHTML=`✓ <b>Document Base</b> — ${Object.keys(r.docs).length} docs${r.asOf?` · as of ${r.asOf}`:''} ${RMV}`;}
+    else if(n===3){raw.users=parseUsers(wb);st.innerHTML=`✓ <b>Users</b> — ${Object.keys(raw.users).length} mapped ${RMV}`;}
+    else{raw.ubase=parseUserBase(wb);st.innerHTML=`✓ <b>User Base</b> — ${Object.keys(raw.ubase).length} users (fleet / sub-dept detail) ${RMV}`;}
     st.style.display='';toast('อ่าน '+file.name+' สำเร็จ ✓');checkReady();
   }catch(e){
     st.className='callout e';st.innerHTML='✗ '+esc(e.message);st.style.display='';
@@ -1862,7 +1870,23 @@ $('#btnExCsv').onclick=exportCsv;
   drop.addEventListener('drop',e=>{if(e.dataTransfer.files[0])handleImport(n,e.dataTransfer.files[0]);});
 });
 $('#btnPublish').onclick=publish;
-$('#btnClearImport').onclick=()=>{raw={up:null,doc:null,docAsOf:'',users:null,ubase:null};[1,2,3,4].forEach(n=>$('#st'+n).style.display='none');$('#importPreview').style.display='none';$('#btnPublish').disabled=true;};
+$('#btnClearImport').onclick=()=>{
+  raw={up:null,doc:null,docAsOf:'',users:null,ubase:null};
+  [1,2,3,4].forEach(n=>{const st=$('#st'+n);st.style.display='none';st.innerHTML='';});
+  $('#importPreview').style.display='none';$('#btnPublish').disabled=true;
+  toast('ล้างไฟล์ที่เลือกไว้แล้ว — ข้อมูลที่ Publish ไปแล้วยังอยู่');
+};
+$('#btnWipeAll').onclick=async()=>{
+  if(!confirm('ล้างข้อมูลทั้งหมดที่เก็บในเครื่องนี้?\n(User Performance / Users / User Base / Document Base / การตั้งค่า จะหายทั้งหมด)'))return;
+  UP=[];userMap={...SEED_MAP};userBase={};docBase={};META={snapshot:'',asOf:''};
+  newDocState=[];udNewState=[];_dbKeys=[];selDepts=null;dfTmp=null;drillDept=null;
+  Object.values(SK).forEach(k=>{if(storageOK){try{localStorage.removeItem(k);}catch(e){}}delete memStore[k];});
+  raw={up:null,doc:null,docAsOf:'',users:null,ubase:null};
+  [1,2,3,4].forEach(n=>{const st=$('#st'+n);st.style.display='none';st.innerHTML='';});
+  $('#importPreview').style.display='none';$('#btnPublish').disabled=true;
+  C=compute();buildNewDocState();renderAll();
+  toast('ล้างข้อมูลทั้งหมดแล้ว ✓');
+};
 $('#snapDate').value=todayISO();
 
 $('#btnShareHtml').onclick=exportShareHtml;
