@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Clock, Gauge, Info, GraduationCap } from "lucide-react";
+import { Clock, Gauge, Info, GraduationCap, AlertTriangle } from "lucide-react";
 import { StatusPill, Bar } from "./ui.jsx";
 import { assess } from "../lib/assess.js";
 import {
@@ -54,6 +54,16 @@ export default function Dashboard({ profile, records, training }) {
           <div className="panel-head"><span>Tasks on different dates</span><StatusPill state={a.tasksMet ? "pass" : "caution"}>{a.effTasks} / {TASKS_TARGET}</StatusPill></div>
           <Bar pct={a.tasksPct} tone={a.tasksMet ? "green" : "blue"} />
           <div className="panel-foot">Effective tasks incl. capped alternative activities. Meet <b>either</b> this or working days.</div>
+          {a.exclusionReasons.length > 0 && (
+            <div className="excl-note">
+              <div className="excl-note-head"><AlertTriangle size={14} /> {a.excludedTotal} record{a.excludedTotal !== 1 ? "s" : ""} not counted:</div>
+              <ul className="excl-note-list">
+                {a.exclusionReasons.map(r => (
+                  <li key={r.k}><b className="mono">{r.count}</b> — {r.label}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
         <div className="panel">
           <div className="panel-head"><span>Working days (full 7–8 h)</span><StatusPill state={a.daysMet ? "pass" : "caution"}>{a.fullDays} / {DAYS_TARGET}</StatusPill></div>

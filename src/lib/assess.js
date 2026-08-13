@@ -30,8 +30,14 @@ export function trainingContribution(training, start, end) {
 
 export function assess(records, profile, training) {
   const start = profile?.periodStart, end = profile?.periodEnd;
-  const inWin = (records || []).filter(r => r.date && (!start || r.date >= start) && (!end || r.date <= end));
+  const all = records || [];
+  const inWin = all.filter(r => r.date && (!start || r.date >= start) && (!end || r.date <= end));
   const sorted = [...inWin].sort((a, b) => a.date.localeCompare(b.date));
+
+  // records excluded from the count entirely, and why
+  const noDateCount = all.filter(r => !r.date).length;
+  const beforePeriodCount = start ? all.filter(r => r.date && r.date < start).length : 0;
+  const afterPeriodCount = end ? all.filter(r => r.date && r.date > end).length : 0;
 
   // training-derived experience folded into the logbook totals
   const tc = trainingContribution(training, start, end);
@@ -101,12 +107,24 @@ export function assess(records, profile, training) {
   const altOk = altCount <= altCapTasks;
   const eligible = crit1 && spreadOk && natureOk && altOk && similarOk && (inWin.length + trainingTasks) > 0;
 
+  // excess alternative-activity / training records beyond the 20% cap — logged
+  // but not counted toward the task target
+  const excessAltCount = Math.max(0, altCount - altCapTasks);
+  const excludedTotal = noDateCount + beforePeriodCount + afterPeriodCount + excessAltCount;
+  const exclusionReasons = [
+    beforePeriodCount > 0 && { k: "before", label: "Dated before the experience period", count: beforePeriodCount },
+    afterPeriodCount > 0 && { k: "after", label: "Dated after the experience period", count: afterPeriodCount },
+    noDateCount > 0 && { k: "nodate", label: "Missing a date", count: noDateCount },
+    excessAltCount > 0 && { k: "altcap", label: `Exceeds the 20% alternative-activities cap (max ${altCapTasks})`, count: excessAltCount },
+  ].filter(Boolean);
+
   return {
     total: inWin.length, directCount, altCount, logbookAltCount, effTasks, fullDays, workingDays, distinctDates: distinctDates.length,
     trainingTasks, trainingDays: tc.days.size,
     tasksMet, daysMet, crit1, tasksPct: clampPct((effTasks / TASKS_TARGET) * 100), daysPct: clampPct((fullDays / DAYS_TARGET) * 100),
     firstHalf, secondHalf, mid, maxGap, spreadOk, typeCounts, typesCovered, natureOk, missingTypes, actCounts,
     groupDist, typeDist, usingPrivilege, similarOk, altCapTasks, altOk, eligible, start, end, byDate, distinctDatesList: distinctDates,
+    noDateCount, beforePeriodCount, afterPeriodCount, excessAltCount, excludedTotal, exclusionReasons,
   };
 }
 
