@@ -31,13 +31,22 @@ export function trainingContribution(training, start, end) {
 export function assess(records, profile, training) {
   const start = profile?.periodStart, end = profile?.periodEnd;
   const all = records || [];
-  const inWin = all.filter(r => r.date && (!start || r.date >= start) && (!end || r.date <= end));
+
+  // records excluded from the count entirely, and why — keyed by record id so
+  // the logbook table can highlight the exact rows that don't count
+  const excludedIds = new Map();
+  const inWin = [];
+  for (const r of all) {
+    if (!r.date) { excludedIds.set(r.id, "nodate"); continue; }
+    if (start && r.date < start) { excludedIds.set(r.id, "before"); continue; }
+    if (end && r.date > end) { excludedIds.set(r.id, "after"); continue; }
+    inWin.push(r);
+  }
   const sorted = [...inWin].sort((a, b) => a.date.localeCompare(b.date));
 
-  // records excluded from the count entirely, and why
-  const noDateCount = all.filter(r => !r.date).length;
-  const beforePeriodCount = start ? all.filter(r => r.date && r.date < start).length : 0;
-  const afterPeriodCount = end ? all.filter(r => r.date && r.date > end).length : 0;
+  const noDateCount = [...excludedIds.values()].filter(v => v === "nodate").length;
+  const beforePeriodCount = [...excludedIds.values()].filter(v => v === "before").length;
+  const afterPeriodCount = [...excludedIds.values()].filter(v => v === "after").length;
 
   // training-derived experience folded into the logbook totals
   const tc = trainingContribution(training, start, end);
@@ -54,13 +63,19 @@ export function assess(records, profile, training) {
   // PLUS practical training courses fed in from the training record. They all
   // count under the same 20% alternative-activities allowance.
   const isAlt = (r) => EXP_CATEGORIES.find(c => c.k === r.category)?.alt;
-  const logbookAltCount = inWin.filter(isAlt).length;
+  const altRecordsSorted = inWin.filter(isAlt).sort((a, b) => a.date.localeCompare(b.date));
+  const logbookAltCount = altRecordsSorted.length;
   const directCount = inWin.length - logbookAltCount;
   const trainingTasks = tc.tasks;
   const altCount = logbookAltCount + trainingTasks;
   const altCapTasks = Math.floor(TASKS_TARGET * ALT_MAX_PCT); // 36
   const altCountedTasks = Math.min(altCount, altCapTasks);
   const effTasks = directCount + altCountedTasks;
+
+  // training tasks (not editable logbook rows) fill the cap first; earliest
+  // logbook alt entries fill what's left, so the latest-dated excess is flagged
+  const capForLogbookAlt = Math.max(0, altCapTasks - trainingTasks);
+  altRecordsSorted.forEach((r, i) => { if (i >= capForLogbookAlt) excludedIds.set(r.id, "altcap"); });
 
   // criterion 1: tasks OR days
   const tasksMet = effTasks >= TASKS_TARGET;
@@ -109,13 +124,13 @@ export function assess(records, profile, training) {
 
   // excess alternative-activity / training records beyond the 20% cap — logged
   // but not counted toward the task target
-  const excessAltCount = Math.max(0, altCount - altCapTasks);
-  const excludedTotal = noDateCount + beforePeriodCount + afterPeriodCount + excessAltCount;
+  const excessAltCount = [...excludedIds.values()].filter(v => v === "altcap").length;
+  const excludedTotal = excludedIds.size;
   const exclusionReasons = [
-    beforePeriodCount > 0 && { k: "before", label: "Dated before the experience period", count: beforePeriodCount },
-    afterPeriodCount > 0 && { k: "after", label: "Dated after the experience period", count: afterPeriodCount },
-    noDateCount > 0 && { k: "nodate", label: "Missing a date", count: noDateCount },
-    excessAltCount > 0 && { k: "altcap", label: `Exceeds the 20% alternative-activities cap (max ${altCapTasks})`, count: excessAltCount },
+    beforePeriodCount > 0 && { k: "before", label: EXCLUSION_LABELS.before, count: beforePeriodCount },
+    afterPeriodCount > 0 && { k: "after", label: EXCLUSION_LABELS.after, count: afterPeriodCount },
+    noDateCount > 0 && { k: "nodate", label: EXCLUSION_LABELS.nodate, count: noDateCount },
+    excessAltCount > 0 && { k: "altcap", label: exclusionLabel("altcap", altCapTasks), count: excessAltCount },
   ].filter(Boolean);
 
   return {
@@ -124,8 +139,20 @@ export function assess(records, profile, training) {
     tasksMet, daysMet, crit1, tasksPct: clampPct((effTasks / TASKS_TARGET) * 100), daysPct: clampPct((fullDays / DAYS_TARGET) * 100),
     firstHalf, secondHalf, mid, maxGap, spreadOk, typeCounts, typesCovered, natureOk, missingTypes, actCounts,
     groupDist, typeDist, usingPrivilege, similarOk, altCapTasks, altOk, eligible, start, end, byDate, distinctDatesList: distinctDates,
-    noDateCount, beforePeriodCount, afterPeriodCount, excessAltCount, excludedTotal, exclusionReasons,
+    noDateCount, beforePeriodCount, afterPeriodCount, excessAltCount, excludedTotal, exclusionReasons, excludedIds,
   };
+}
+
+/* Shared "why isn't this counted" labels, used by the dashboard summary and
+   the logbook table's per-row highlight so the wording always matches. */
+const EXCLUSION_LABELS = {
+  before: "Dated before the experience period",
+  after: "Dated after the experience period",
+  nodate: "Missing a date",
+};
+export function exclusionLabel(key, altCapTasks) {
+  if (key === "altcap") return `Exceeds the 20% alternative-activities cap (max ${altCapTasks})`;
+  return EXCLUSION_LABELS[key] || "Not counted";
 }
 
 /* Training expiry status, for compliance monitoring. */

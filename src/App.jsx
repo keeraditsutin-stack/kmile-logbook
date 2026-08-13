@@ -61,6 +61,7 @@ export default function App() {
   const addLog = (rec) => persistLog({ ...logbook, [current.email]: [...myLogs, rec] });
   const updateLog = (id, rec) => persistLog({ ...logbook, [current.email]: myLogs.map(r => r.id === id ? { ...rec, id } : r) });
   const deleteLog = (id) => persistLog({ ...logbook, [current.email]: myLogs.filter(r => r.id !== id) });
+  const clearLogs = () => persistLog({ ...logbook, [current.email]: [] });
   const importLogs = (recs, mode, period) => {
     const base = mode === "replace" ? [] : myLogs;
     persistLog({ ...logbook, [current.email]: [...base, ...recs] });
@@ -150,7 +151,7 @@ export default function App() {
 
       <main className="main">
         {tab === "dashboard" && <Dashboard profile={current} records={myLogs} training={myTraining} />}
-        {tab === "logbook" && <LogbookRecord records={myLogs} profile={current} formTemplate={formTemplate} training={myTraining} onAdd={addLog} onUpdate={updateLog} onDelete={deleteLog} onImport={importLogs} />}
+        {tab === "logbook" && <LogbookRecord records={myLogs} profile={current} formTemplate={formTemplate} training={myTraining} onAdd={addLog} onUpdate={updateLog} onDelete={deleteLog} onClearAll={clearLogs} onImport={importLogs} />}
         {tab === "training" && <TrainingRecord records={myTraining} onAdd={addTr} onDelete={deleteTr} onImport={importTr} />}
         {tab === "guideline" && <UserGuide />}
         {tab === "admin-dash" && isAdmin && !viewingUser && (

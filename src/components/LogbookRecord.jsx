@@ -1,10 +1,10 @@
 import { useState, useMemo, useRef } from "react";
-import { Plus, Trash2, Download, Search, Edit3, FileSpreadsheet, GraduationCap } from "lucide-react";
+import { Plus, Trash2, Download, Search, Edit3, FileSpreadsheet, GraduationCap, AlertTriangle } from "lucide-react";
 import { Field } from "./ui.jsx";
 import { ImportModal, ExportModal } from "./modals.jsx";
 import { AIRCRAFT_TYPES, RATINGS, TASK_TYPES, ACTIVITY_TYPES, EXP_CATEGORIES, DEFAULT_FORM_TEMPLATE } from "../lib/constants.js";
 import { uid, todayISO, fmtDate } from "../lib/helpers.js";
-import { trainingStatus } from "../lib/assess.js";
+import { trainingStatus, assess, exclusionLabel } from "../lib/assess.js";
 
 const emptyRecord = () => ({
   date: todayISO(), location: "", acType: "B737-400", acReg: "", rating: "A1", privilege: "-",
@@ -12,8 +12,9 @@ const emptyRecord = () => ({
   remark: "", category: "direct",
 });
 
-export default function LogbookRecord({ records, profile, formTemplate, training, onAdd, onUpdate, onDelete, onImport, readOnly }) {
+export default function LogbookRecord({ records, profile, formTemplate, training, onAdd, onUpdate, onDelete, onClearAll, onImport, readOnly }) {
   const cols = { ...DEFAULT_FORM_TEMPLATE.columns, ...(formTemplate?.columns || {}) };
+  const a = useMemo(() => assess(records, profile, training), [records, profile, training]);
   const [form, setForm] = useState(emptyRecord());
   const [editing, setEditing] = useState(null);
   const [q, setQ] = useState("");
@@ -30,6 +31,10 @@ export default function LogbookRecord({ records, profile, formTemplate, training
     setForm(emptyRecord());
   };
   const startEdit = (r) => { setForm({ ...emptyRecord(), ...r }); setEditing(r.id); setOpen(true); topRef.current?.scrollIntoView({ behavior: "smooth" }); };
+  const clearAll = () => {
+    if (!records.length) return;
+    if (window.confirm(`Delete all ${records.length} logbook record(s)? This cannot be undone.`)) onClearAll();
+  };
 
   // valid training records (not expired, not failed) shown combined in the logbook
   const trainingRows = useMemo(() => (training || [])
@@ -54,6 +59,7 @@ export default function LogbookRecord({ records, profile, formTemplate, training
         <div className="head-actions">
           <button className="btn btn-ghost" onClick={() => setExportOpen(true)} disabled={!records.length}><Download size={16} /> Export PDF</button>
           {!readOnly && <button className="btn btn-ghost" onClick={() => setImportOpen(true)}><FileSpreadsheet size={16} /> Import Excel / PDF</button>}
+          {!readOnly && <button className="btn btn-ghost btn-danger-ghost" onClick={clearAll} disabled={!records.length}><Trash2 size={16} /> Clear all records</button>}
           {!readOnly && <button className="btn btn-ghost" onClick={() => setOpen(o => !o)}>{open ? "Hide form" : <>New record <Plus size={16} /></>}</button>}
         </div>
       </header>
@@ -127,6 +133,15 @@ export default function LogbookRecord({ records, profile, formTemplate, training
         </div>
       </div>
 
+      {a.excludedTotal > 0 && (
+        <div className="excl-note" style={{ marginBottom: 16 }}>
+          <div className="excl-note-head"><AlertTriangle size={14} /> {a.excludedTotal} record{a.excludedTotal !== 1 ? "s" : ""} highlighted below are not counted toward the dashboard's task target:</div>
+          <ul className="excl-note-list">
+            {a.exclusionReasons.map(r => <li key={r.k}><b className="mono">{r.count}</b> — {r.label}</li>)}
+          </ul>
+        </div>
+      )}
+
       <div className="table-wrap">
         {filtered.length === 0 ? <div className="empty">No records yet. Add your first maintenance task above.</div> : (
           <table className="tbl">
@@ -150,8 +165,11 @@ export default function LogbookRecord({ records, profile, formTemplate, training
                   <td>{r.supervisedBy || "—"}</td>
                   {!readOnly && <td className="cell-actions"><span className="you-tag">from Training</span></td>}
                 </tr>
-              ) : (
-                <tr key={r.id}>
+              ) : (() => {
+                const exclKey = a.excludedIds.get(r.id);
+                const exclTitle = exclKey ? exclusionLabel(exclKey, a.altCapTasks) : null;
+                return (
+                <tr key={r.id} className={exclKey ? "row-excluded" : ""} title={exclTitle}>
                   <td className="mono nowrap">{fmtDate(r.date)}</td>
                   <td>{r.location || "—"}</td>
                   <td className="mono">{r.acType}</td>
@@ -160,7 +178,10 @@ export default function LogbookRecord({ records, profile, formTemplate, training
                   <td className="cell-tags">{TASK_TYPES.filter(t => r.tasks?.[t.k]).map(t => <span key={t.k} className="tag">{t.label}</span>)}</td>
                   <td className="cell-tags">{ACTIVITY_TYPES.filter(t => r.activity?.[t.k]).map(t => <span key={t.k} className="tag tag-blue">{t.label}</span>)}</td>
                   <td className="mono">{r.ata || "—"}</td>
-                  <td className="cell-details">{r.details}</td>
+                  <td className="cell-details">
+                    {r.details}
+                    {exclKey && <span className="tag tag-red" title={exclTitle}><AlertTriangle size={10} style={{ verticalAlign: "-1px" }} /> Not counted</span>}
+                  </td>
                   <td className="mono">{r.duration || "—"}</td>
                   <td className="mono">{r.ref || "—"}</td>
                   <td>{r.supervisedBy || "—"}</td>
@@ -169,7 +190,8 @@ export default function LogbookRecord({ records, profile, formTemplate, training
                     <button className="icon-btn icon-danger" onClick={() => onDelete(r.id)} title="Delete"><Trash2 size={15} /></button>
                   </td>}
                 </tr>
-              ))}
+                );
+              })())}
             </tbody>
           </table>
         )}
