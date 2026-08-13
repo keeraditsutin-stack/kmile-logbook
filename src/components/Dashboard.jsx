@@ -18,7 +18,7 @@ export default function Dashboard({ profile, records, training }) {
           <div className="eyebrow">Summary sheet</div>
           <h2 className="page-title">Experience readiness</h2>
         </div>
-        <div className="period-tag"><Clock size={14} />{fmtDate(profile.periodStart)} → {fmtDate(profile.periodEnd)}</div>
+        <div className="period-tag"><Clock size={14} />{fmtDate(a.start)} → {fmtDate(a.end)} (today)</div>
       </header>
 
       <div className={"readiness " + (a.eligible ? "readiness-ok" : "readiness-no")}>
@@ -77,7 +77,7 @@ export default function Dashboard({ profile, records, training }) {
           <span>Experience spread across the 2‑year period</span>
           <StatusPill state={a.spreadOk ? "pass" : "caution"}>{a.spreadOk ? "Well distributed" : "Uneven / gap detected"}</StatusPill>
         </div>
-        <SpreadTimeline a={a} profile={profile} />
+        <SpreadTimeline a={a} />
         <div className="split-legend">
           <span><b>{a.firstHalf}</b> in year 1</span>
           <span><b>{a.secondHalf}</b> in year 2</span>
@@ -142,8 +142,8 @@ export default function Dashboard({ profile, records, training }) {
   );
 }
 
-export function SpreadTimeline({ a, profile }) {
-  const start = profile.periodStart, end = profile.periodEnd;
+export function SpreadTimeline({ a }) {
+  const start = a.start, end = a.end;
   if (!start || !end) return <div className="empty-sm">Set an experience period to see the distribution.</div>;
   const span = Math.max(1, daysBetween(start, end));
   const pos = (d) => clampPct((daysBetween(start, d) / span) * 100);

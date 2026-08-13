@@ -29,7 +29,10 @@ export function trainingContribution(training, start, end) {
 }
 
 export function assess(records, profile, training) {
-  const start = profile?.periodStart, end = profile?.periodEnd;
+  // the experience-period end always rolls forward to today, so records
+  // stay "in period" as time passes rather than aging out against a
+  // date that was fixed when the account/period was last set
+  const start = profile?.periodStart, end = todayISO();
   const all = records || [];
 
   // records excluded from the count entirely, and why — keyed by record id so
