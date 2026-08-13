@@ -495,6 +495,7 @@ table.dbt input[type=date],table.dbt select{font-size:11px;border:1px solid var(
         <th data-k="pub" class="r">Published Date</th>
         <th data-k="due" class="r">Due Date</th>
         <th data-k="status" class="r">Status (today)</th>
+        <th></th>
       </tr></thead>
       <tbody id="dbBody"></tbody>
     </table>
@@ -1467,7 +1468,8 @@ function renderDocBase(){
     <td class="r"><input type="date" value="${r.pub}" onchange="dbEditPub(${i},this.value)" title="แก้ Published Date — Due Date คำนวณใหม่อัตโนมัติ"></td>
     <td class="r">${r.due||'—'}</td>
     <td class="r"><span class="pill ${r.status==='Over due'?'e':'ok'}">${r.status}</span></td>
-  </tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--mu);padding:16px">ยังไม่มีเอกสารใน Document Base — import ไฟล์หรือเพิ่มด้วยมือ</td></tr>';
+    <td class="r"><button class="btn g" style="padding:2px 8px;font-size:11.5px;color:var(--err)" onclick="dbDeleteRow(${i})" title="ลบเอกสารนี้ออกจาก Document Base ถาวร">✕</button></td>
+  </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:var(--mu);padding:16px">ยังไม่มีเอกสารใน Document Base — import ไฟล์หรือเพิ่มด้วยมือ</td></tr>';
   $$('#tab-docbase table.dbt thead th[data-k]').forEach(th=>th.onclick=()=>{
     const k=th.dataset.k;if(dbSort.k===k)dbSort.d*=-1;else{dbSort.k=k;dbSort.d=k==='name'?1:-1;}renderDocBase();});
 }
@@ -1516,6 +1518,13 @@ async function dbEditAck(i,v){
   d.ack=Number(v)||7;if(d.pub)d.due=addDays(d.pub,d.ack);
   await saveDB();C=compute();buildNewDocState();renderAll();
   toast(`"${d.name}" → ack period ${d.ack} days ✓`);
+}
+async function dbDeleteRow(i){
+  const k=_dbKeys[i];const d=docBase[k];if(!d)return;
+  if(!confirm(`ลบ "${d.name}" ออกจาก Document Base ถาวร?\n(ถ้าเอกสารนี้ยังอยู่ใน Unread Manuals ของ user มันจะกลับไปขึ้นเป็น "เอกสารใหม่" อีกครั้งในรอบถัดไป)`))return;
+  delete docBase[k];
+  await saveDB();C=compute();buildNewDocState();renderAll();
+  toast(`ลบ "${d.name}" ออกจาก Document Base แล้ว`);
 }
 function onManType(){const t=$('#manType').value;$('#manAck').value=t==='custom'?7:fsdsAck(t);}
 async function handlePdfs(files){
