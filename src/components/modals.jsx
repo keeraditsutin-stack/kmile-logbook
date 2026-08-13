@@ -4,7 +4,7 @@ import {
   CheckCircle2, Download, Edit3, KeyRound,
 } from "lucide-react";
 import { Field } from "./ui.jsx";
-import { fmtDate, todayISO } from "../lib/helpers.js";
+import { fmtDate, todayISO, addYears } from "../lib/helpers.js";
 import { parseLogbookXlsx } from "../lib/excelImport.js";
 import { parseTrainingPdf, parseLogbookPdf } from "../lib/pdfImport.js";
 import { exportLogbookPdf } from "../lib/pdfExport.js";
@@ -235,9 +235,10 @@ export function ExportModal({ records, profile, formTemplate, onClose }) {
   const [range, setRange] = useState("all");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const periodEnd = todayISO(); // rolling window: the period always ends today
+  const periodEnd = todayISO(); // rolling 24-month window: always ends today
+  const periodStart = addYears(periodEnd, -2);
   const recs = range === "period"
-    ? records.filter(r => (!profile.periodStart || r.date >= profile.periodStart) && r.date <= periodEnd)
+    ? records.filter(r => r.date >= periodStart && r.date <= periodEnd)
     : records;
   const go = async () => {
     setBusy(true); setErr("");
@@ -250,7 +251,7 @@ export function ExportModal({ records, profile, formTemplate, onClose }) {
         <div className="import-opts">
           <div className="opt-title">Records to include</div>
           <label className={"radio " + (range === "all" ? "radio-on" : "")}><input type="radio" checked={range === "all"} onChange={() => setRange("all")} /><span><b>All records</b> — {records.length} total</span></label>
-          <label className={"radio " + (range === "period" ? "radio-on" : "")}><input type="radio" checked={range === "period"} onChange={() => setRange("period")} /><span><b>Experience period only</b> — {fmtDate(profile.periodStart)} → {fmtDate(periodEnd)} (today)</span></label>
+          <label className={"radio " + (range === "period" ? "radio-on" : "")}><input type="radio" checked={range === "period"} onChange={() => setRange("period")} /><span><b>Experience period only</b> — {fmtDate(periodStart)} → {fmtDate(periodEnd)} (today)</span></label>
         </div>
         <div className="export-facts">
           <div><span>Signature</span><b>{profile.signature ? "Included ✓" : "Not set"}</b></div>

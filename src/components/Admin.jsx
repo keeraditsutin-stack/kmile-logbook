@@ -124,7 +124,6 @@ export function UserManagement({ users, onRegister, onUpdateUser, selfEmail }) {
   const [form, setForm] = useState({
     name: "", email: "", staffId: "", amelNo: "", position: "LAE", role: "staff",
     status: "active", password: "", usePrivilege: true,
-    periodStart: addYears(todayISO(), -2),
   });
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState("");
@@ -144,7 +143,7 @@ export function UserManagement({ users, onRegister, onUpdateUser, selfEmail }) {
       email, name: form.name.trim(), staffId: form.staffId.trim(), amelNo: form.amelNo.trim(),
       position: form.role === "admin" ? ADMIN_POSITION : form.position,
       role: form.role, status: form.status, usePrivilege: form.usePrivilege,
-      periodStart: form.periodStart, periodEnd: todayISO(),
+      periodStart: addYears(todayISO(), -2), periodEnd: todayISO(),
       salt, passHash, mustChangePassword: true, createdAt: todayISO(),
     });
     setOk(`${form.name.trim()} registered. Give them the temporary password — they will be asked to change it at first sign-in.`);
@@ -213,8 +212,8 @@ export function UserManagement({ users, onRegister, onUpdateUser, selfEmail }) {
               <option value="yes">Using privilege</option><option value="no">Not using</option>
             </select>
           </Field>
-          <Field label="Experience period — start" hint="end always rolls to today"><input className="input" type="date" value={form.periodStart} onChange={e => setForm({ ...form, periodStart: e.target.value })} /></Field>
         </div>
+        <div className="dz-hint"><Info size={14} /> Experience period is a rolling 24‑month window ending today — no dates to set.</div>
         {err && <div className="form-err">{err}</div>}
         {ok && <div className="form-ok">{ok}</div>}
         <div className="form-actions"><button className="btn btn-primary" onClick={register}><UserPlus size={15} /> Register user</button></div>

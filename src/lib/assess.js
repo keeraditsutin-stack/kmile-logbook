@@ -3,7 +3,7 @@ import {
   TASKS_TARGET, DAYS_TARGET, ALT_MAX_PCT, SIMILAR_MIN_PCT, FULL_DAY_HOURS, MAX_GAP_DAYS,
   EXPIRY_WARN_DAYS,
 } from "./constants.js";
-import { daysBetween, clampPct, todayISO } from "./helpers.js";
+import { daysBetween, clampPct, todayISO, addYears } from "./helpers.js";
 
 /* Training records that count as experience feeding the logbook: every course
    with a record inside the experience period. Each course contributes its
@@ -29,10 +29,10 @@ export function trainingContribution(training, start, end) {
 }
 
 export function assess(records, profile, training) {
-  // the experience-period end always rolls forward to today, so records
-  // stay "in period" as time passes rather than aging out against a
-  // date that was fixed when the account/period was last set
-  const start = profile?.periodStart, end = todayISO();
+  // rolling 24-month demonstration window: both ends always slide with
+  // today, rather than being pinned to whatever was stored when the
+  // account/period was last set
+  const end = todayISO(), start = addYears(end, -2);
   const all = records || [];
 
   // records excluded from the count entirely, and why — keyed by record id so
