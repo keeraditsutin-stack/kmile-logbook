@@ -2,7 +2,7 @@ import * as XLSX from "xlsx";
 import { AIRCRAFT_TYPES } from "./constants.js";
 import { uid, clean, toISO } from "./helpers.js";
 
-const CHECKS = ["√", "✓", "x", "v", "j", "y", "yes", "true", "1", "•", "●", "*"];
+const CHECKS = ["√", "✓", "x", "v", "j", "y", "yes", "true", "1", "•", "●", "*", "ü"];
 export const isTrue = (v) => v === true || v === 1 || CHECKS.includes(clean(v).toLowerCase());
 export const normType = (t) => { const c = clean(t).toUpperCase().replace(/\s/g, ""); const map = { B734: "B737-400", B738: "B737-800", B737: "B737-800", B763: "B767-300", B767: "B767-300" }; if (map[c]) return map[c]; const orig = clean(t); return AIRCRAFT_TYPES.includes(orig) ? orig : (orig || "Other"); };
 
