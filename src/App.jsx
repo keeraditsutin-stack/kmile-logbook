@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   LayoutDashboard, ClipboardList, GraduationCap, HelpCircle, ShieldCheck, Users,
-  LogOut, Plane, Edit3, KeyRound, FileText,
+  LogOut, Plane, Edit3, KeyRound, FileText, ClipboardCheck, Table2,
 } from "lucide-react";
 import Login from "./components/Login.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 import LogbookRecord from "./components/LogbookRecord.jsx";
 import TrainingRecord from "./components/TrainingRecord.jsx";
 import UserGuide from "./components/UserGuide.jsx";
+import ComplianceCheck from "./components/ComplianceCheck.jsx";
+import RequirementMatrixAdmin from "./components/RequirementMatrixAdmin.jsx";
 import { AdminDashboard, UserManagement, FormTemplateAdmin } from "./components/Admin.jsx";
 import { SignatureModal, ChangePasswordModal } from "./components/modals.jsx";
 import { K, load, save, seedAdminIfEmpty, DEFAULT_ADMIN } from "./lib/storage.js";
@@ -25,6 +27,8 @@ export default function App() {
   const [pwOpen, setPwOpen] = useState(false);
   const [firstRun, setFirstRun] = useState(false);
   const [formTemplate, setFormTemplate] = useState(null);
+  const [matrixVersions, setMatrixVersions] = useState([]);
+  const [positionRoleMap, setPositionRoleMap] = useState({});
 
   useEffect(() => { (async () => {
     let u = load(K.users, []);
@@ -32,8 +36,10 @@ export default function App() {
     const lb = load(K.logbook, {});
     const tr = load(K.training, {});
     const ft = load(K.formTemplate, null);
+    const mv = load(K.matrixVersions, []);
+    const prm = load(K.positionRoleMap, {});
     const sess = load(K.session, null);
-    setUsers(u); setLogbook(lb); setTraining(tr); setFormTemplate(ft);
+    setUsers(u); setLogbook(lb); setTraining(tr); setFormTemplate(ft); setMatrixVersions(mv); setPositionRoleMap(prm);
     if (sess?.email) { const me = u.find(x => x.email === sess.email); if (me && me.status === "active") setCurrent(me); }
     setLoading(false);
   })(); }, []);
@@ -77,6 +83,13 @@ export default function App() {
   const saveSignature = (dataURL) => updateUser(current.email, { signature: dataURL });
   const saveFormTemplate = (tpl) => { setFormTemplate(tpl); save(K.formTemplate, tpl); };
   const resetFormTemplate = () => { setFormTemplate(null); save(K.formTemplate, null); };
+  const applyMatrixVersion = (version) => {
+    // "revert to this version" re-applies an existing version's matrix as a
+    // brand-new version on top, so the audit trail always reads forward
+    const next = [...matrixVersions, version];
+    setMatrixVersions(next); save(K.matrixVersions, next);
+  };
+  const savePositionRoleMap = (m) => { setPositionRoleMap(m); save(K.positionRoleMap, m); };
 
   const exportCSV = () => {
     const head = ["Email", "Name", "StaffID", "Status", "Date", "Location", "A/C Type", "Reg/SN", "Rating", "TaskTypes", "Activity", "ATA", "Details", "Hours", "Ref", "Category"];
@@ -116,11 +129,13 @@ export default function App() {
     { k: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { k: "logbook", label: "Logbook record", icon: ClipboardList },
     { k: "training", label: "Training record", icon: GraduationCap },
+    { k: "compliance", label: "Compliance check", icon: ClipboardCheck },
     { k: "guideline", label: "User guide", icon: HelpCircle },
     ...(isAdmin ? [
       { k: "admin-dash", label: "Monitoring dashboard", icon: ShieldCheck },
       { k: "admin-users", label: "User management", icon: Users },
       { k: "admin-form", label: "Logbook form", icon: FileText },
+      { k: "admin-matrix", label: "Requirement matrix", icon: Table2 },
     ] : []),
   ];
 
@@ -153,7 +168,15 @@ export default function App() {
         {tab === "dashboard" && <Dashboard profile={current} records={myLogs} training={myTraining} />}
         {tab === "logbook" && <LogbookRecord records={myLogs} profile={current} formTemplate={formTemplate} training={myTraining} onAdd={addLog} onUpdate={updateLog} onDelete={deleteLog} onClearAll={clearLogs} onImport={importLogs} />}
         {tab === "training" && <TrainingRecord records={myTraining} onAdd={addTr} onDelete={deleteTr} onImport={importTr} />}
+        {tab === "compliance" && (
+          <ComplianceCheck users={users} training={training} logbook={logbook} matrixVersions={matrixVersions}
+            positionRoleMap={positionRoleMap} isAdmin={isAdmin} currentUser={current} />
+        )}
         {tab === "guideline" && <UserGuide />}
+        {tab === "admin-matrix" && isAdmin && (
+          <RequirementMatrixAdmin matrixVersions={matrixVersions} onApplyVersion={applyMatrixVersion}
+            positionRoleMap={positionRoleMap} onSavePositionRoleMap={savePositionRoleMap} users={users} training={training} />
+        )}
         {tab === "admin-dash" && isAdmin && !viewingUser && (
           <AdminDashboard users={users} logbook={logbook} training={training} onExport={exportCSV} onView={setViewingEmail} />
         )}

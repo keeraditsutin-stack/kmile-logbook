@@ -8,6 +8,9 @@ export const K = {
   training: "kmile:v3:training",
   session: "kmile:v3:session",
   formTemplate: "kmile:v3:formTemplate",
+  matrixVersions: "kmile:v3:matrixVersions",
+  positionRoleMap: "kmile:v3:positionRoleMap",
+  quickChecks: "kmile:v3:quickChecks",
 };
 
 export const load = (key, fb) => parseJSON(localStorage.getItem(key), fb);

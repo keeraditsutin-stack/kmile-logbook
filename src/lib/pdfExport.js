@@ -164,3 +164,63 @@ export async function exportLogbookPdf(records, profile, formTemplate) {
   doc.save(fname);
   return recs.length;
 }
+
+/* ============ TRAINING COMPLIANCE REPORT ============ */
+const STATUS_LABEL = { COMPLIANT: "Compliant", DUE_SOON: "Due soon", EXPIRED: "Expired", MISSING: "Missing" };
+
+export function exportComplianceReportPdf({ person, result, matrixVersion, unmappedRecords }) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const INK = [0, 0, 0];
+  try { doc.addImage(KMILE_LOGO, "PNG", 40, 24, 100, 100 / KMILE_LOGO_RATIO); } catch { /* logo optional */ }
+  doc.setFont("helvetica", "normal"); doc.setTextColor(...INK);
+  doc.setFontSize(14); doc.text("Personnel Training Compliance Report", W / 2, 40, { align: "center" });
+  doc.setFontSize(9);
+  const lines = [
+    `Name: ${person.name || ""}    Staff ID: ${person.staffId || ""}    Position: ${person.position || ""}`,
+    `Roles — TPM: ${(person.tpmRoles || []).join(", ") || "—"}    GMM: ${(person.gmmPositions || []).join(", ") || "—"}`,
+    `Authorized types: ${(person.authorizedTypes || []).join(", ") || "—"}`,
+    `Audit date: ${fmtDMY(result.auditDate)}    Overall: ${result.overall === "COMPLIANT" ? "Compliant" : "Action required"}`,
+    `Matrix version — TPM ${matrixVersion?.matrix?.tpm?.issue || "?"}/Rev${matrixVersion?.matrix?.tpm?.revision || "?"} (${matrixVersion?.matrix?.tpm?.date || "?"})  ·  GMM ${matrixVersion?.matrix?.gmm?.issue || "?"}/Rev${matrixVersion?.matrix?.gmm?.revision || "?"} (${matrixVersion?.matrix?.gmm?.date || "?"})`,
+  ];
+  lines.forEach((l, i) => doc.text(l, 40, 66 + i * 13));
+
+  const head = [["Requirement", "Source", "Type", "Completed", "Due date", "Status", "Remarks"]];
+  const body = result.findings.map(f => ([
+    f.course, (f.sources || [f.source]).map(s => s.toUpperCase()).join("/"),
+    f.type === "I" ? "Initial" : `Recurrent (${f.years}y)`,
+    f.completed ? fmtDMY(f.completed) : "—", f.dueDate ? fmtDMY(f.dueDate) : "—",
+    STATUS_LABEL[f.status] || f.status,
+    [f.mismatch ? `Expiry mismatch (record: ${fmtDMY(f.recordedExpiry)})` : "", f.recordedNeverButRecurrent ? "Recorded NEVER but matrix requires recurrent" : "", f.note || ""].filter(Boolean).join("; "),
+  ]));
+  autoTable(doc, {
+    head, body, startY: 66 + lines.length * 13 + 14, margin: { left: 40, right: 40 },
+    styles: { font: "helvetica", fontSize: 7.6, cellPadding: 3, textColor: INK, lineColor: INK, lineWidth: 0.3 },
+    headStyles: { fillColor: [230, 230, 230], textColor: INK, fontStyle: "bold" },
+    columnStyles: { 0: { cellWidth: 150 }, 6: { cellWidth: 110 } },
+    didParseCell: (data) => {
+      if (data.section === "body" && data.column.index === 5) {
+        const s = body[data.row.index][5];
+        if (s === "Expired" || s === "Missing") data.cell.styles.textColor = [160, 0, 0];
+        else if (s === "Due soon") data.cell.styles.textColor = [150, 100, 0];
+      }
+    },
+  });
+
+  let y = doc.lastAutoTable.finalY + 20;
+  const H = doc.internal.pageSize.getHeight();
+  if (unmappedRecords?.length) {
+    if (y > H - 120) { doc.addPage(); y = 40; }
+    doc.setFontSize(9); doc.text("Unmapped training records (not matched to a requirement):", 40, y); y += 12;
+    doc.setFontSize(7.6);
+    unmappedRecords.slice(0, 20).forEach(r => { doc.text(`• ${fmtDMY(r.date)} — ${r.course}`, 46, y); y += 10; });
+  }
+  if (y > H - 90) { doc.addPage(); y = 40; }
+  y += 20;
+  doc.setDrawColor(...INK); doc.setLineWidth(0.5);
+  doc.line(40, y + 30, 220, y + 30); doc.line(260, y + 30, 400, y + 30);
+  doc.setFontSize(8); doc.text("Checked by", 40, y + 42); doc.text("Date", 260, y + 42);
+
+  const fname = `Training_Compliance_${(person.name || "staff").replace(/\s+/g, "_")}_${fmtDMY(result.auditDate).replace(/\s/g, "")}.pdf`;
+  doc.save(fname);
+}
