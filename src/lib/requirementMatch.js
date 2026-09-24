@@ -1,112 +1,168 @@
-/* Matches a training record's free-text course description to a requirement
-   row id from the active matrix. Pure, testable. Aliases are ordered most-
-   specific first since the first match wins. */
+/* Matches a training record's free-text course description to requirement
+   rows in the ACTIVE matrix, by keyword overlap against each row's own
+   `course` text — not a hand-maintained alias table. This is deliberately
+   generic: personnel training-record course names drift from the official
+   GMM/TPM wording in real, unpredictable ways (typos, renames, abbreviation
+   vs spelled-out, "System" vs "Safety", old vs new course titles), so
+   matching against the manuals' own live text self-adapts whenever the
+   matrix is revised, instead of needing a new hand-written rule every time.
 
-const ALIAS_RULES = [
-  // --- shared / renamed courses seen across real K-Mile training records ---
-  { id: "scms", re: /safety and comp\w*\s*management system|\bsqms\b|safety management system \(sms\)|safety quality management system/i },
-  { id: "esetc", re: /\bes?etc\b|safety (and )?emergency equipment (procedure|training)|safety equipment and procedure/i },
-  { id: "human_factors", re: /human factors?(\s*(for engineering|and crew resource management)?)?|\bhf\/?crm\b|crew resource management and human factor/i },
-  { id: "avsec_both", re: /aviation security.*(awareness.*in-?flight|in-?flight.*awareness)/i },
-  { id: "avsec_awareness", re: /aviation security.*awareness|security awareness training/i },
-  { id: "avsec_inflight", re: /aviation security.*in-?flight|in-?flight security/i },
-  { id: "dg_engineering", re: /dangerous goods.*(for )?engineering|dangerous goods regulation training/i },
-  { id: "caat_regulations", re: /aviation regulation.*air law|general air law|tcar\s*8?\s*part\s*145|tcar8 part145/i },
-  { id: "company_manual", re: /(general maintenance manual|gmm).*(company manual)?|moe.*tpm|company manual.*(moe|tpm)|part\s*145 maintenance organi[sz]ation exposition/i },
-  { id: "basic_amos", re: /basic amos/i },
-  { id: "eng_maint_documentation", re: /engineering and maint(enance)?\.? document|mpd.*rpm.*mel\/cdl|engineering and maintenance documentation/i },
-  { id: "ramp_safety", re: /ramp safety/i },
-  { id: "test_equipment_gse", re: /test equipment.*(tools|gse)|ground support equipment/i },
-  { id: "type_rating_recurrent", re: /(b73[7-9]\w*|b767)[\w -]*(type )?(rating|recurrent).*recurrent|aircraft type b7\d\d-?\d* recurrent|(b737cl|b737ng|b767)\s*aircraft type rating\s*-?\s*recurrent/i },
-  { id: "type_rating_initial", re: /(b737cl|b737ng|b767)[\w -]*(type rating|gen(eral)? fam)|b737[\w\-/]*type course|type course.*airframe powerplant/i },
-  { id: "b737_fam", re: /b737cl (to )?(and )?b737ng.*(famil|differences)|b737-?(400|800)?\s*gen(eral)? fam/i },
-  { id: "b767_fam", re: /b767[\w -]*famil/i },
-  { id: "engine_ground_run", re: /engine ground run/i },
-  { id: "cargo_diff_door", re: /cargo aircraft differential.*door|differential cargo aircraft.*door|i\.?a\.?i freighter configuration/i },
-  { id: "cargo_conversion_config", re: /cargo (aircraft )?conversion configuration|boeing conversion freighter configuration/i },
-  { id: "basic_inspection_technique", re: /basic aircraft inspection technique/i },
-  { id: "parts_receiving_sup", re: /part(s)? receiving inspection|suspect(ed)? unapproved part|receiving inspection/i },
-  { id: "borescope", re: /borescope inspection/i },
-  { id: "auditor_training", re: /auditor training/i },
-  { id: "internal_auditor", re: /internal auditor/i },
-  { id: "investigator", re: /investigator/i },
-  { id: "internal_compliance_briefing", re: /internal compliance monitoring process briefing/i },
-  { id: "ewis_g5", re: /ewis.*group\s*5|electrical wiring.*group\s*5/i },
-  { id: "ewis_g1g2", re: /ewis|electrical wiring/i },
-  { id: "fts_cdccl_phase1", re: /fuel tank (safety|system).*(cdccl|critical design).*phase\s*1(?!.*phase\s*2)/i },
-  { id: "fts_cdccl_phase2", re: /fuel tank (safety|system).*(cdccl|critical design).*phase\s*2(?!.*phase\s*1)|fuel tank.*phase\s*1\s*\+\s*2|fuel tank.*phase 1\+2/i },
-  { id: "deicing_anti_icing", re: /de-?icing.*anti-?icing/i },
-  { id: "erp", re: /emergency response plan|\berp\b/i },
-  { id: "aircraft_operation_spec", re: /aircraft operation specification/i },
-  { id: "reliability_program", re: /reliability program/i },
-  { id: "fdr_cvr", re: /fdr and cvr|fdr\/cvr/i },
-  { id: "train_the_trainer", re: /train the trainer/i },
-];
+   Approach:
+   1. Tokenize both the record description and each row's course name into
+      weighted keywords (acronyms and single-digit phase/group numbers count
+      more; common filler words are dropped).
+   2. A small typo/synonym table repairs the handful of proven real-world
+      spelling variants and renamed acronyms (SQMS/SCMS, SEP/ESETC, HF/CRM,
+      B737-400/-800 -> CL/NG) — this is the only part that needs maintaining
+      by hand, and it is short and about wording, not about which course
+      maps to which requirement.
+   3. Score = weighted overlap of shared tokens ÷ total weight of the row's
+      tokens. A row with a single-digit phase/group number (Phase 1 vs
+      Phase 2, Group 1&2 vs Group 5) only matches if that exact digit is
+      present in the record — this prevents a "Phase 2" record from also
+      satisfying "Phase 1", which pure overlap would otherwise allow.
+   4. Every row scoring above the threshold is returned (not just the best
+      single match), because one record legitimately satisfies more than
+      one requirement row sometimes — e.g. a combined "Awareness and
+      In-Flight" certificate, or a "Phase 1+2" course. */
 
-// map a canonical alias id to the actual requirement row ids in each source
-// (tpm./gmm. prefixed) — a record can satisfy both at once.
-const ALIAS_TO_REQUIREMENTS = {
-  scms: ["tpm.scms", "gmm.scms_awareness", "gmm.scms_inflight"],
-  esetc: ["gmm.esetc"],
-  human_factors: ["tpm.human_factors", "gmm.human_factors"],
-  avsec_both: ["tpm.avsec_awareness", "tpm.avsec_inflight", "gmm.avsec_nonsecurity", "gmm.avsec_security"],
-  avsec_awareness: ["tpm.avsec_awareness", "gmm.avsec_nonsecurity"],
-  avsec_inflight: ["tpm.avsec_inflight", "gmm.avsec_security"],
-  dg_engineering: ["tpm.dg_engineering", "gmm.dg_engineering"],
-  caat_regulations: ["tpm.caat_regulations", "gmm.general_air_law"],
-  company_manual: ["tpm.company_manual", "gmm.company_manuals"],
-  basic_amos: ["tpm.basic_amos", "gmm.basic_amos"],
-  eng_maint_documentation: ["gmm.eng_maint_documentation"],
-  ramp_safety: ["tpm.ramp_safety", "gmm.ramp_safety"],
-  test_equipment_gse: ["tpm.test_equipment_gse"],
-  type_rating_recurrent: ["tpm.type_rating_recurrent"],
-  type_rating_initial: ["tpm.type_rating_initial", "gmm.b737cl_type_rating_initial", "gmm.b737ng_type_rating_initial", "gmm.b767_type_rating_initial"],
-  b737_fam: ["tpm.b737_fam", "gmm.b737_fam"],
-  b767_fam: ["tpm.b767_fam", "gmm.b767_fam"],
-  engine_ground_run: ["tpm.engine_ground_run", "gmm.engine_ground_run"],
-  cargo_diff_door: ["tpm.cargo_diff_door", "gmm.cargo_diff_door_737cl"],
-  cargo_conversion_config: ["tpm.cargo_conversion_737ng", "tpm.freighter_config_767", "gmm.cargo_conversion_737ng"],
-  basic_inspection_technique: ["tpm.basic_inspection_technique", "gmm.basic_inspection_technique"],
-  parts_receiving_sup: ["tpm.parts_receiving_sup", "gmm.parts_receiving_sup"],
-  borescope: ["tpm.borescope_cfm56_pw4000", "tpm.borescope_tool"],
-  auditor_training: ["tpm.auditor_training"],
-  internal_auditor: ["gmm.internal_auditor"],
-  investigator: ["tpm.investigator"],
-  internal_compliance_briefing: ["tpm.internal_compliance_briefing"],
-  ewis_g1g2: ["tpm.ewis_g1g2", "gmm.ewis_g1g2"],
-  ewis_g5: ["tpm.ewis_g5", "gmm.ewis_g5"],
-  fts_cdccl_phase1: ["tpm.fts_cdccl_phase1", "gmm.fts_cdccl_phase1"],
-  fts_cdccl_phase2: ["tpm.fts_cdccl_phase2", "gmm.fts_cdccl_phase2"],
-  deicing_anti_icing: ["gmm.deicing_anti_icing"],
-  erp: ["gmm.erp"],
-  aircraft_operation_spec: ["gmm.aircraft_operation_spec_initial"],
-  reliability_program: ["gmm.reliability_program"],
-  fdr_cvr: ["gmm.fdr_cvr"],
-  train_the_trainer: ["tpm.train_the_trainer"],
+const STOPWORDS = new Set([
+  "and", "for", "of", "the", "a", "an", "on", "in", "to", "with", "by",
+  "initial", "recurrent", "course", "program", "training", "provided",
+]);
+
+// spelling/OCR-typo fixes seen in real K-Mile records, applied before matching
+const TYPO_FIX = {
+  compilance: "compliance", complianace: "compliance", compliancee: "compliance",
+  confuguration: "configuration", configuartion: "configuration",
+  familization: "familiarization", familiarzation: "familiarization",
+  differentail: "differential", differental: "differential",
+  suspected: "suspect", technique: "techniques",
 };
 
-/* Returns the list of requirement ids (across TPM + GMM) that a training
-   record's course description satisfies, or [] if nothing matched. FTS
-   "Phase 1+2" descriptions satisfy both phases at once. */
-export function matchRequirements(description) {
-  const d = String(description || "");
-  const isFtsBoth = /fuel tank.*phase\s*1\s*\+\s*2|fuel tank.*phase 1\+2|cdccl.*phase 1\+2/i.test(d);
-  if (isFtsBoth) {
-    return [...(ALIAS_TO_REQUIREMENTS.fts_cdccl_phase1 || []), ...(ALIAS_TO_REQUIREMENTS.fts_cdccl_phase2 || [])];
-  }
-  for (const rule of ALIAS_RULES) {
-    if (rule.re.test(d)) return ALIAS_TO_REQUIREMENTS[rule.id] || [];
-  }
-  return [];
+// token -> extra tokens to inject (renames / acronym drift / abbreviations
+// that share no common substring with the official wording)
+const SYNONYM_ADD = {
+  sqms: ["scms"], sms: ["scms"], quality: ["compliance"],
+  sep: ["esetc", "emergency", "checking"],
+  hf: ["human", "factors"], crm: ["human", "factors"],
+  moe: ["manual"], gmm: ["general", "maintenance", "manual"],
+  dg: ["dangerous", "goods"],
+  gse: ["ground", "support", "equipment"],
+  sup: ["unapproved", "part"],
+  iai: ["differential", "door"], aei: ["differential", "door"],
+  bcf: ["conversion", "freighter"],
+  avsec: ["aviation", "security"],
+};
+
+/** Light plural stemming (manuals/manual, factors/factor) so wording
+   variants of the same word don't miss each other. Never applied to
+   acronyms or numbers — stemming "SCMS"/"EWIS" would mangle them (SCMS ->
+   "SCM", EWIS -> "EWI") since they happen to end in S. */
+function stem(w) {
+  if (w.length > 4 && w.endsWith("ies")) return w.slice(0, -3) + "y";
+  if (w.length > 4 && w.endsWith("es") && !w.endsWith("ss")) return w.slice(0, -2);
+  if (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) return w.slice(0, -1);
+  return w;
 }
 
-/* Given the active matrix (tpm+gmm), resolve which of the matched
-   requirement ids actually exist in it (defends against ids drifting after
-   an admin uploads a revised matrix that renames/removes rows). */
+// aircraft-type tokens that are alternatives of EACH OTHER within a single
+// requirement row (e.g. "Aircraft Type Rating (B737CL / B737NG / B767-300)"
+// lists three options a person could hold any one of) — collapsed to one
+// slot before scoring so a record naming only one type isn't penalized for
+// not mentioning the other two.
+const ALT_GROUPS = [["b737cl", "b737ng", "b767"]];
+function collapseAltGroups(mapIn) {
+  const map = new Map(mapIn);
+  ALT_GROUPS.forEach((group, gi) => {
+    let maxW = 0, present = false;
+    for (const g of group) { if (map.has(g)) { present = true; maxW = Math.max(maxW, map.get(g)); map.delete(g); } }
+    if (present) map.set(`__altgroup${gi}`, maxW);
+  });
+  return map;
+}
+
+/** Tokenize text into { map: word -> weight, numeric: Set of single-digit
+   mandatory tokens }. Runs the typo fixes and synonym injections, plus a
+   small pass that resolves K-Mile's B737-400/-800 registration naming to
+   the manuals' B737CL/B737NG naming (400 = CL, 800 = NG per the fleet). */
+function tokenSetOf(text) {
+  // collapse dotted acronyms ("I.A.I", "A.E.I") into one token before splitting
+  const collapsed = String(text || "").replace(/\b(?:[A-Za-z]\.){1,}[A-Za-z]\.?\b/g, m => m.replace(/\./g, ""));
+  const raw = collapsed.split(/[^A-Za-z0-9]+/).filter(Boolean);
+  const map = new Map(); const numeric = new Set();
+  const add = (word, weight) => map.set(word, Math.max(map.get(word) || 0, weight));
+
+  for (let i = 0; i < raw.length; i++) {
+    const w = raw[i];
+    const isPureNumber = /^\d+$/.test(w);
+    const isAcronym = !isPureNumber && w.length >= 2 && w.length <= 6 && w === w.toUpperCase() && /[A-Z]/.test(w);
+    let lower = isAcronym || isPureNumber ? w.toLowerCase() : stem(w.toLowerCase());
+    lower = TYPO_FIX[lower] || lower;
+    if (STOPWORDS.has(lower)) continue;
+
+    if (isPureNumber && w.length === 1) { add(lower, 5); numeric.add(lower); continue; }
+    add(lower, isPureNumber ? 2 : isAcronym ? 3 : 1);
+
+    const extra = SYNONYM_ADD[w.toLowerCase()] || SYNONYM_ADD[lower];
+    if (extra) for (const e of extra) add(e, isAcronym ? 2 : 1);
+
+    // B737-400 / B737-800 -> inject the CL/NG naming the manuals use
+    if (/^b?737$/.test(lower) && raw[i + 1]) {
+      const suffix = raw[i + 1];
+      if (suffix === "400") add("b737cl", 3);
+      if (suffix === "800") add("b737ng", 3);
+    }
+  }
+  return { map: collapseAltGroups(map), numeric };
+}
+
+function scoreMatch(recSet, rowSet) {
+  for (const n of rowSet.numeric) if (!recSet.map.has(n)) return 0; // hard: phase/group number must match exactly
+  let shared = 0, total = 0, sharedWords = 0;
+  for (const [w, wt] of rowSet.map) {
+    total += wt;
+    if (recSet.map.has(w)) { shared += wt; sharedWords++; }
+  }
+  if (total === 0) return 0;
+  const need = rowSet.map.size <= 2 ? 1 : 2; // a short 2-token row (e.g. "SCMS — Awareness") can be decisively matched by its one distinctive word
+  if (sharedWords < need) return 0;
+  const weightedScore = shared / total;
+  // a row like "Aviation Security (AVSEC) Awareness" is 3/4 distinctive
+  // words plus one acronym that just repeats the same meaning — a record
+  // that names every distinctive word but happens to skip the acronym
+  // shouldn't fail purely because the acronym's weight dominated the
+  // total, so distinct-word coverage is accepted as an alternate path.
+  const coverage = sharedWords / rowSet.map.size;
+  return Math.max(weightedScore, coverage >= 0.7 ? coverage : 0);
+}
+
+const MATCH_THRESHOLD = 0.55;
+
+/** Returns the requirement row ids (across TPM + GMM in `matrix`) whose
+   course text keyword-matches `description`, best score first. A record
+   can satisfy more than one row (see module doc). */
+export function matchRequirements(description, matrix) {
+  const recSet = tokenSetOf(description);
+  if (!recSet.map.size) return [];
+  const results = [];
+  for (const source of ["tpm", "gmm"]) {
+    for (const row of matrix?.[source]?.rows || []) {
+      const rowSet = tokenSetOf(row.course);
+      const score = scoreMatch(recSet, rowSet);
+      if (score >= MATCH_THRESHOLD) results.push({ id: row.id, score });
+    }
+  }
+  return results.sort((a, b) => b.score - a.score).map(r => r.id);
+}
+
+/** Given the active matrix, filter a list of requirement ids down to the
+   ones that actually exist in it — defends manual `requirementOverride`
+   picks (and any leftover ids) against drift after a matrix revision. */
 export function resolveRequirementIds(ids, matrix) {
   const known = new Set([
-    ...(matrix.tpm?.rows || []).map(r => r.id),
-    ...(matrix.gmm?.rows || []).map(r => r.id),
+    ...(matrix?.tpm?.rows || []).map(r => r.id),
+    ...(matrix?.gmm?.rows || []).map(r => r.id),
   ]);
-  return ids.filter(id => known.has(id));
+  return (ids || []).filter(id => known.has(id));
 }

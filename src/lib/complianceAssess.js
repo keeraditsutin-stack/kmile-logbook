@@ -24,7 +24,7 @@ function buildRequirementRecordIndex(trainingRecords, matrix, auditDate) {
     const completed = rec.dateTo && rec.dateTo >= rec.date ? rec.dateTo : rec.date;
     if (!completed || completed > auditDate) continue; // not yet completed as of the audit date
     const ids = resolveRequirementIds(
-      rec.requirementOverride?.length ? rec.requirementOverride : matchRequirements(rec.course),
+      rec.requirementOverride?.length ? rec.requirementOverride : matchRequirements(rec.course, matrix),
       matrix
     );
     if (!ids.length) { unmapped.push(rec); continue; }

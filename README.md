@@ -51,7 +51,13 @@ You are forced to set a new password at first sign-in. Then use
   Flags Compliant / Due soon / Expired / Missing per requirement, cross-links
   the same real-world requirement across GMM and TPM (earlier due date
   governs), flags expiry-date mismatches between the record and the computed
-  due date, and exports a signed-off PDF compliance report or CSV.
+  due date, and exports a signed-off PDF compliance report or CSV. Personnel
+  record course names are matched to requirements by **keyword overlap
+  against the matrix's own wording** (not a hand-maintained alias list), so
+  the real-world naming drift between what's printed on a training record
+  and the official GMM/TPM course title — typos, renamed courses, acronym
+  vs spelled-out, "SQMS" vs "SCMS" — is tolerated automatically; anything
+  that still can't be matched confidently is listed, never silently dropped.
 - **Requirement matrix administration** — the GMM/TPM matrix itself is
   versioned data, updatable by dropping a revised GMM or TPM section PDF (or
   the deterministic Excel round-trip: download the current matrix, edit it,
